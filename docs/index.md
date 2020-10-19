@@ -3,7 +3,7 @@ layout: default
 title:  Home
 ---
 
-Source code: https://github.com/kchian/MAI_Project (_fix this_)
+Source code: https://github.com/kchian/MAI_Project
 
 Reports:
 
