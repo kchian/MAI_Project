@@ -3,7 +3,7 @@ layout: default
 title:  Proposal
 ---
 
-# {{ page.title }}
+# {{ Proposal }}
 
 ## Summary of the Project
 Our AI will spawn in a cave biome and its main goal is to mine as much valuable ore as possible. It will be given a pickaxe and points are awarded for each ore mined. Rarer ores, such as diamond and redstone, are awarded more points. It will be able to explore the cave and avoid hazards such as lava, water, and pitfalls. Its surroundings will be provided through Malmo's framework, and target ores will be provided as input parameters. If it finds ore, it will stop, mine, and pick up the ore. The output will be an inventory full of ores.
