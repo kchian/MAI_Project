@@ -151,10 +151,20 @@ steps = 0
 while world_state.is_mission_running:
     world_state = agent_host.getWorldState()
     # agent_host.sendCommand(random.choice(ACTION_DICT.keys())
+    if len(world_state.video_frames):
+        if world_state.video_frames[-1].channels == 3:
+            print('R:' + str(world_state.video_frames[-1].pixels[410*260]))
+            print('G:' + str(world_state.video_frames[-1].pixels[410*260*2]))
+            print('B:' + str(world_state.video_frames[-1].pixels[410*260*3]))
+    for obs in world_state.observations:
+        msg = obs.text
+        ob = json.loads(msg)
+        chat = ob.get(u'Chat', "")
     print(".", end="")
     time.sleep(0.1)
     for error in world_state.errors:
         print("Error:",error.text)
+       
 
 print()
 print("Mission ended")
