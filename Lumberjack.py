@@ -84,6 +84,10 @@ def getXML():
                             <Width>800</Width>
                             <Height>500</Height>
                         </ColourMapProducer>
+                        <DepthProducer>
+                            <Width> 800 </Width>
+                            <Height> 500 </Height>
+                        </DepthProducer>
                         <AgentQuitFromReachingCommandQuota total="'''+str(MAX_EPISODE_STEPS)+'''" />
                         <RewardForCollectingItem>
                             <Item type="log" reward="1"/>
@@ -116,6 +120,7 @@ my_mission = MalmoPython.MissionSpec(getXML(), True)
 my_mission_record = MalmoPython.MissionRecordSpec()
 my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
 my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
+my_mission_record.recordBitmaps(MalmoPython.FrameType.DEPTH_MAP)# Line to record Depth_Map frames
 
 my_mission.requestVideoWithDepth(800, 500)
 my_mission.setViewpoint(0)
@@ -150,7 +155,14 @@ steps = 0
 # Loop until mission ends:
 while world_state.is_mission_running:
     world_state = agent_host.getWorldState()
-    # agent_host.sendCommand(random.choice(ACTION_DICT.keys())
+    if len(world_state.video_frames):
+        if world_state.video_frames[-1].channels == 4:
+            print('R:' + str(world_state.video_frames[-1].pixels[410*260]))
+            print('G:' + str(world_state.video_frames[-1].pixels[410*260*2]))
+            print('B:' + str(world_state.video_frames[-1].pixels[410*260*3]))
+            print('D:' + str(world_state.video_frames[-1].pixels[410*260*4]))# D = Depth maybe?
+    #action = random.randint(0, 2)#Did 0-2 because i dont want it to hit anything randomly and fall through the hole =p
+    #agent_host.sendCommand(ACTION_DICT[action])
     print(".", end="")
     time.sleep(0.1)
     for error in world_state.errors:
