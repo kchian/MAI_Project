@@ -11,7 +11,6 @@ from tqdm import tqdm
 from collections import deque
 import matplotlib.pyplot as plt 
 import numpy as np
-from numpy.random import randint
 
 import torch
 import torch.nn as nn
@@ -84,11 +83,13 @@ def get_observation(world_state):
             raise AssertionError('Could not load grid.')
 
         if len(world_state.video_frames):
-            if world_state.video_frames[-1].channels == 4:
-                pixels = world_state.video_frames[-1].pixels
+            if world_state.video_frames[0].channels == 4:
+                pixels = world_state.video_frames[0].pixels
                 obs = np.reshape(pixels, (4, 800, 500))
                 break
-
+            else:
+                # If a lot of these show up, we might want something to find the first frame with depth
+                print('no depth found')
     return obs
 
 def prepare_batch(replay_buffer):
@@ -181,8 +182,7 @@ def get_action(obs, q_network, epsilon):
         obs_torch = torch.tensor(obs.copy(), dtype=torch.float).unsqueeze(0)
         action_values = q_network(obs_torch)
 
-        # Remove attack/mine from possible actions if not facing a diamond
-        if randint(1000)/1000 < epsilon:
+        if random.random() < epsilon:
             action_idx = randint(len(ACTION_DICT))
         else:
         # Select action with highest Q-value
