@@ -1,3 +1,7 @@
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
+
 try:
     from malmo import MalmoPython
 except:
@@ -12,10 +16,7 @@ from collections import deque
 import matplotlib.pyplot as plt 
 import numpy as np
 
-import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-
+from numpy.random import randint
 from LumberjackEnvironment import getXML
 from LumberjackQNet import QNetwork
 
@@ -83,12 +84,14 @@ def get_observation(world_state):
             raise AssertionError('Could not load grid.')
 
         if len(world_state.video_frames):
-            if world_state.video_frames[0].channels == 4:
+            for frame in world_state.video_frames:
+                if frame.channels == 4:
+                    break
+            if frame.channels == 4:
                 pixels = world_state.video_frames[0].pixels
                 obs = np.reshape(pixels, (4, 800, 500))
                 break
             else:
-                # If a lot of these show up, we might want something to find the first frame with depth
                 print('no depth found')
     return obs
 
