@@ -39,9 +39,9 @@ COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
 
 ACTION_DICT = {
     0: 'move 1',  # Move one block forward
-    1: 'turn 1',  # Turn 90 degrees to the right
-    2: 'turn -1',  # Turn 90 degrees to the left
-    3: 'attack 1',  # Destroy block
+    1: 'turn 0.25',  # Turn 22.5 degrees to the right
+    2: 'turn -0.25',  # Turn 22.5 degrees to the left
+    # 3: 'attack 1',  # Destroy block
     # 4: 'pitch 1',
     # 5: 'pitch -1',
     # 6: 'move 0',
@@ -92,7 +92,8 @@ def get_observation(world_state):
                 obs = np.reshape(pixels, (4, 800, 500))
                 break
             else:
-                print('no depth found')
+                pass
+                # print('no depth found')
     return obs
 
 def prepare_batch(replay_buffer):
@@ -115,7 +116,7 @@ def prepare_batch(replay_buffer):
     next_obs = torch.tensor([x[2] for x in batch_data], dtype=torch.float)
     reward = torch.tensor([x[3] for x in batch_data], dtype=torch.float)
     done = torch.tensor([x[4] for x in batch_data], dtype=torch.float)
-    print(obs, action, next_obs, reward, done)
+    #print(obs, action, next_obs, reward, done)
     return obs, action, next_obs, reward, done
   
 def learn(batch, optim, q_network, target_network):
@@ -152,7 +153,7 @@ def log_returns(steps, returns):
     returns_smooth = np.convolve(returns, box, mode='same')
     plt.clf()
     plt.plot(steps, returns_smooth)
-    plt.title('Diamond Collector')
+    plt.title('Reach the tree')
     plt.ylabel('Return')
     plt.xlabel('Steps')
     plt.savefig('returns.png')
@@ -173,12 +174,6 @@ def get_action(obs, q_network, epsilon):
     Returns:
         action (int): chosen action [0, action_size)
     """
-    #------------------------------------
-    #
-    #   TODO: Implement e-greedy policy
-    #
-    #-------------------------------------
-
     # Prevent computation graph from being calculated
     with torch.no_grad():
         # Calculate Q-values fot each action
@@ -190,7 +185,7 @@ def get_action(obs, q_network, epsilon):
         else:
         # Select action with highest Q-value
             action_idx = torch.argmax(action_values).item()
-        
+    print(ACTION_DICT[action_idx])
     return action_idx
 
 def train(agent_host):
@@ -270,10 +265,15 @@ def train(agent_host):
             next_obs = get_observation(world_state) 
 
             # Get reward
-            #TODO Add reward for moving closer to tree
             reward = 0
             for r in world_state.rewards:
+                print(r)
                 reward += r.getValue()
+            for o in world_state.observations:
+                msg = o.text
+                observations = json.loads(msg)
+                reward -= observations['distanceFromTree']
+
             episode_return += reward
 
             # Store step in replay buffer
@@ -292,7 +292,6 @@ def train(agent_host):
 
                 if global_step % TARGET_UPDATE == 0:
                     target_network.load_state_dict(q_network.state_dict())
-
         num_episode += 1
         returns.append(episode_return)
         steps.append(global_step)
