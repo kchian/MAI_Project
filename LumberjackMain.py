@@ -35,13 +35,13 @@ LEARNING_RATE = 1e-4
 
 SIZE = 10 #Dimensions of map
 PATH = r"Models\state_dict_model%d.pt" #Path to save model
-COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
+COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
 
 ACTION_DICT = {
     0: 'move 1',  # Move one block forward
-    1: 'turn 1',  # Turn 90 degrees to the right
-    2: 'turn -1',  # Turn 90 degrees to the left
-    3: 'attack 1',  # Destroy block
+    1: 'turn 0.5',  # Turn 22.5 degrees to the right
+    2: 'turn -0.25',  # Turn 22.5 degrees to the left
+    # 3: 'attack 1',  # Destroy block
     # 4: 'pitch 1',
     # 5: 'pitch -1',
     # 6: 'move 0',
@@ -54,8 +54,8 @@ def init_malmo(agent_host):
     #Record Mission 
     my_mission = MalmoPython.MissionSpec(getXML(MAX_EPISODE_STEPS, SIZE), True)
     my_mission_record = MalmoPython.MissionRecordSpec()
-    my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
-    my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
+    #my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
+    # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
 
     my_mission.requestVideoWithDepth(800, 500)
     my_mission.setViewpoint(0)
@@ -92,7 +92,8 @@ def get_observation(world_state):
                 obs = np.reshape(pixels, (4, 800, 500))
                 break
             else:
-                print('no depth found')
+                pass
+                # print('no depth found')
     return obs
 
 def prepare_batch(replay_buffer):
@@ -115,7 +116,7 @@ def prepare_batch(replay_buffer):
     next_obs = torch.tensor([x[2] for x in batch_data], dtype=torch.float)
     reward = torch.tensor([x[3] for x in batch_data], dtype=torch.float)
     done = torch.tensor([x[4] for x in batch_data], dtype=torch.float)
-    print(obs, action, next_obs, reward, done)
+    #print(obs, action, next_obs, reward, done)
     return obs, action, next_obs, reward, done
   
 def learn(batch, optim, q_network, target_network):
@@ -152,7 +153,7 @@ def log_returns(steps, returns):
     returns_smooth = np.convolve(returns, box, mode='same')
     plt.clf()
     plt.plot(steps, returns_smooth)
-    plt.title('Diamond Collector')
+    plt.title('Reach the tree')
     plt.ylabel('Return')
     plt.xlabel('Steps')
     plt.savefig('returns.png')
@@ -173,12 +174,6 @@ def get_action(obs, q_network, epsilon):
     Returns:
         action (int): chosen action [0, action_size)
     """
-    #------------------------------------
-    #
-    #   TODO: Implement e-greedy policy
-    #
-    #-------------------------------------
-
     # Prevent computation graph from being calculated
     with torch.no_grad():
         # Calculate Q-values fot each action
@@ -190,7 +185,6 @@ def get_action(obs, q_network, epsilon):
         else:
         # Select action with highest Q-value
             action_idx = torch.argmax(action_values).item()
-        
     return action_idx
 
 def train(agent_host):
@@ -270,10 +264,23 @@ def train(agent_host):
             next_obs = get_observation(world_state) 
 
             # Get reward
-            #TODO Add reward for moving closer to tree
             reward = 0
             for r in world_state.rewards:
                 reward += r.getValue()
+            for o in world_state.observations:
+                msg = o.text
+                observations = json.loads(msg)
+                reward -= observations['distanceFromTree']
+            for f in world_state.video_frames:
+                if f.frametype == MalmoPython.FrameType.COLOUR_MAP:
+                    center_x = 400
+                    center_y = 250
+                    if (f.pixels[center_x*center_y], f.pixels[center_x*center_y*2], f.pixels[center_x*center_y*3]) == COLOURS['wood']:
+                        reward += 10
+                    # print('R:' + str(f.pixels[center_x*center_y]))
+                    # print('G:' + str(f.pixels[center_x*center_y*2]))
+                    # print('B:' + str(f.pixels[center_x*center_y*3]))
+
             episode_return += reward
 
             # Store step in replay buffer
@@ -292,7 +299,6 @@ def train(agent_host):
 
                 if global_step % TARGET_UPDATE == 0:
                     target_network.load_state_dict(q_network.state_dict())
-
         num_episode += 1
         returns.append(episode_return)
         steps.append(global_step)
