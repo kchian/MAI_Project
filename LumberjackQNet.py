@@ -5,27 +5,26 @@ import numpy as np
 import random
 from numpy.random import randint
 
-# Q-Value Network
 class QNetwork(nn.Module):
-    def __init__(self, obs_size, action_size, hidden_size=75):
-        super().__init__()
-        self.obs_size    = obs_size
-        self.action_size = action_size
-        self.epsilon     = 1
-        self.net = nn.Sequential(nn.Linear(np.prod(obs_size), hidden_size),
-                                 nn.ReLU(),
-                                 nn.Linear(hidden_size, action_size)) 
-        
-    def forward(self, obs):
-        """
-        Estimate q-values given obs
+    def __init__(self, obs_size, action_size):
+        super(QNetwork, self).__init__()
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(4, 4, kernel_size=10, stride=1, padding=2),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=5, stride=5))
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(4, 4, kernel_size=5, stride=1, padding=2),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=5, stride=5))
+        self.drop_out = nn.Dropout()
+        self.fc1 = nn.Linear(2356, 1000)
+        self.fc2 = nn.Linear(1000, action_size)
 
-        Args:
-            obs (tensor): current obs, size (batch x obs_size)
-
-        Returns:
-            q-values (tensor): estimated q-values, size (batch x action_size)
-        """
-        batch_size = obs.shape[0]
-        obs_flat = obs.view(batch_size, -1)
-        return self.net(obs_flat)
+    def forward(self, x):
+        out = self.layer1(x)
+        out = self.layer2(out)
+        out = out.reshape(out.size(0), -1)
+        out = self.drop_out(out)
+        out = self.fc1(out)
+        out = self.fc2(out)
+        return out
