@@ -121,6 +121,7 @@ def prepare_batch(replay_buffer):
     reward = torch.tensor([x[3] for x in batch_data], dtype=torch.float)
     print(".", end = "")
     done = torch.tensor([x[4] for x in batch_data], dtype=torch.float)
+    print('Done')
     #print(obs, action, next_obs, reward, done)
     return obs, action, next_obs, reward, done
   
