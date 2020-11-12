@@ -40,7 +40,7 @@ COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
 ACTION_DICT = {
     0: 'move 1',  # Move one block forward
     1: 'turn 0.25',  # Turn 22.5 degrees to the right
-    2: 'turn -0.25',  # Turn 22.5 degrees to the left
+    #2: 'turn -0.25',  # Turn 22.5 degrees to the left
     # 3: 'attack 1',  # Destroy block
     # 4: 'pitch 1',
     # 5: 'pitch -1',
@@ -273,6 +273,15 @@ def train(agent_host):
                 msg = o.text
                 observations = json.loads(msg)
                 reward -= observations['distanceFromTree']
+            for f in world_state.video_frames:
+                if f.frametype == MalmoPython.FrameType.COLOUR_MAP:
+                    center_x = 400
+                    center_y = 250
+                    if (f.pixels[center_x*center_y], f.pixels[center_x*center_y*2], f.pixels[center_x*center_y*3]) == COLOURS['wood']:
+                        reward += 100
+                    print('R:' + str(f.pixels[center_x*center_y]))
+                    print('G:' + str(f.pixels[center_x*center_y*2]))
+                    print('B:' + str(f.pixels[center_x*center_y*3]))
 
             episode_return += reward
 
