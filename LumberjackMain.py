@@ -21,25 +21,28 @@ from LumberjackEnvironment import getXML
 from LumberjackQNet import QNetwork
 
 #Hyperparameters
-MAX_EPISODE_STEPS = 100
-MAX_GLOBAL_STEPS = 10000
+MAX_EPISODE_STEPS = 30
+MAX_GLOBAL_STEPS = 100000
 REPLAY_BUFFER_SIZE = 10000
-EPSILON_DECAY = .999
 MIN_EPSILON = .1
-BATCH_SIZE = 128
+BATCH_SIZE = 70
 GAMMA = .9
 TARGET_UPDATE = 100
 START_TRAINING = 500
-LEARN_FREQUENCY = 1
+LEARN_FREQUENCY = 100
 LEARNING_RATE = 1e-4
+EPSILON_DECAY = .999**LEARN_FREQUENCY
 
 SIZE = 10 #Dimensions of map
-PATH = r"Models\state_dict_model%d.pt" #Path to save model
-COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
+PATH = r"state_dict_model%d.pt" #Path to save model
+LOAD = False
+MODELNUM = 1000
+MODEL = r"state_dict_model%d.pt"
+COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
 
 ACTION_DICT = {
-    0: 'move 1',  # Move one block forward
-    1: 'turn 0.5',  # Turn 22.5 degrees to the right
+    0: 'move .5',  # Move forward
+    1: 'turn 0.25',  # Turn 22.5 degrees to the right
     2: 'turn -0.25',  # Turn 22.5 degrees to the left
     # 3: 'attack 1',  # Destroy block
     # 4: 'pitch 1',
@@ -54,9 +57,8 @@ def init_malmo(agent_host):
     #Record Mission 
     my_mission = MalmoPython.MissionSpec(getXML(MAX_EPISODE_STEPS, SIZE), True)
     my_mission_record = MalmoPython.MissionRecordSpec()
-    #my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
+    # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
     # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
-
     my_mission.requestVideoWithDepth(800, 500)
     my_mission.setViewpoint(0)
 
@@ -84,16 +86,13 @@ def get_observation(world_state):
             raise AssertionError('Could not load grid.')
 
         if len(world_state.video_frames):
-            for frame in world_state.video_frames:
+            for frame in reversed(world_state.video_frames):
                 if frame.channels == 4:
                     break
             if frame.channels == 4:
                 pixels = world_state.video_frames[0].pixels
                 obs = np.reshape(pixels, (4, 800, 500))
                 break
-            else:
-                pass
-                # print('no depth found')
     return obs
 
 def prepare_batch(replay_buffer):
@@ -110,11 +109,17 @@ def prepare_batch(replay_buffer):
         reward (tensor): float tensor of size (BATCH_SIZE)
         done (tensor): float tensor of size (BATCH_SIZE)
     """
+    print("Batching", end="")
     batch_data = random.sample(replay_buffer, BATCH_SIZE)
+    print(".", end = "")
     obs = torch.tensor([x[0] for x in batch_data], dtype=torch.float)
+    print(".", end = "")
     action = torch.tensor([x[1] for x in batch_data], dtype=torch.long)
+    print(".", end = "")
     next_obs = torch.tensor([x[2] for x in batch_data], dtype=torch.float)
+    print(".", end = "")
     reward = torch.tensor([x[3] for x in batch_data], dtype=torch.float)
+    print(".", end = "")
     done = torch.tensor([x[4] for x in batch_data], dtype=torch.float)
     #print(obs, action, next_obs, reward, done)
     return obs, action, next_obs, reward, done
@@ -181,9 +186,11 @@ def get_action(obs, q_network, epsilon):
         action_values = q_network(obs_torch)
 
         if random.random() < epsilon:
+            print("r", end="")
             action_idx = randint(len(ACTION_DICT))
         else:
         # Select action with highest Q-value
+            print("q", end="")
             action_idx = torch.argmax(action_values).item()
     return action_idx
 
@@ -194,9 +201,14 @@ def train(agent_host):
     Args:
         agent_host (MalmoPython.AgentHost)
     """
-    # Init networks
+    #Init networks
     q_network = QNetwork((4, 800, 500), len(ACTION_DICT))
     target_network = QNetwork((4, 800, 500), len(ACTION_DICT))
+    if LOAD:
+        q_network.load_state_dict(torch.load(PATH%MODELNUM))
+        q_network.eval()
+        target_network.load_state_dict(torch.load(PATH%(MODELNUM+10000)))
+        target_network.eval()
     target_network.load_state_dict(q_network.state_dict())
 
     # Init optimizer
@@ -207,12 +219,16 @@ def train(agent_host):
 
     # Init vars
     global_step = 0
+    last = 0
     num_episode = 0
     epsilon = 1
     start_time = time.time()
     returns = []
     steps = []
-
+    
+    if LOAD:
+        global_step = 300
+        epsilon = .8
     # Begin main loop
     loop = tqdm(total=MAX_GLOBAL_STEPS, position=0, leave=False)
     while global_step < MAX_GLOBAL_STEPS:
@@ -232,7 +248,6 @@ def train(agent_host):
         obs = get_observation(world_state)
 
         # Run episode
-        print("\nRunning")
         while world_state.is_mission_running:
             # Get action
             action_idx = get_action(obs, q_network, epsilon)
@@ -242,7 +257,7 @@ def train(agent_host):
             agent_host.sendCommand(command)
 
             # If your agent isn't registering reward you may need to increase this
-            time.sleep(.1)
+            time.sleep(.3)
 
             # We have to manually calculate terminal state to give malmo time to register the end of the mission
             # If you see "commands connection is not open. Is the mission running?" you may need to increase this
@@ -277,28 +292,38 @@ def train(agent_host):
                     center_y = 250
                     if (f.pixels[center_x*center_y], f.pixels[center_x*center_y*2], f.pixels[center_x*center_y*3]) == COLOURS['wood']:
                         reward += 10
-                    # print('R:' + str(f.pixels[center_x*center_y]))
-                    # print('G:' + str(f.pixels[center_x*center_y*2]))
-                    # print('B:' + str(f.pixels[center_x*center_y*3]))
-
             episode_return += reward
-
             # Store step in replay buffer
             replay_buffer.append((obs, action_idx, next_obs, reward, done))
             obs = next_obs
 
             # Learn
             global_step += 1
-            if global_step > START_TRAINING and global_step % LEARN_FREQUENCY == 0:
-                batch = prepare_batch(replay_buffer)
-                loss = learn(batch, optim, q_network, target_network)
-                episode_loss += loss
+            last+=1
 
-                if epsilon > MIN_EPSILON:
-                    epsilon *= EPSILON_DECAY
+            #Sleep until death if falling
+            if world_state.observations:
+                msg = world_state.observations[-1].text
+                observations = json.loads(msg)
+                if observations['YPos']<-2:
+                    obs, action_idx, next_obs, reward, done = replay_buffer[-1]
+                    replay_buffer.append((obs, action_idx, next_obs, reward-10000, done))
+                    episode_return-=10000
+                    time.sleep(3)
+                    break
+        if global_step > START_TRAINING and last>=LEARN_FREQUENCY:
+            print("Learning")
+            last = 0
+            batch = prepare_batch(replay_buffer)
+            loss = learn(batch, optim, q_network, target_network)
+            episode_loss += loss
 
-                if global_step % TARGET_UPDATE == 0:
-                    target_network.load_state_dict(q_network.state_dict())
+            if epsilon > MIN_EPSILON:
+                epsilon *= EPSILON_DECAY
+
+            if last>=TARGET_UPDATE:
+                target_network.load_state_dict(q_network.state_dict())
+
         num_episode += 1
         returns.append(episode_return)
         steps.append(global_step)
@@ -307,11 +332,12 @@ def train(agent_host):
         loop.set_description('Episode: {} Steps: {} Time: {:.2f} Loss: {:.2f} Last Return: {:.2f} Avg Return: {:.2f}'.format(
             num_episode, global_step, (time.time() - start_time) / 60, episode_loss, episode_return, avg_return))
 
-        if num_episode > 0 and num_episode % 100 == 0:
-            #ADD save
+        #Save model and log returns every hundred episodes
+        if num_episode%25==0:
+            print("Saved Model")
             torch.save(q_network.state_dict(), PATH%num_episode)
+            torch.save(target_network.state_dict(), PATH%(num_episode+10000))
             log_returns(steps, returns)
-            print()
 
 
 if __name__ == '__main__':

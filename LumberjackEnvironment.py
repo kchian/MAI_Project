@@ -37,7 +37,8 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
                         <FlatWorldGenerator generatorString="3;7,2;1;"/>
                         <DrawingDecorator>''' + \
                             "<DrawCuboid x1='{}' x2='{}' y1='0' y2='10' z1='{}' z2='{}' type='air'/>".format(-SIZE-100, SIZE+100, -SIZE-100, SIZE+100) + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='-1' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='-1' z1='{}' z2='{}' type='grass'/>".format(-SIZE*2, SIZE*2, -SIZE*2, SIZE*2) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             drawTree(treePos) + \
                             '''
                         </DrawingDecorator>
@@ -65,9 +66,12 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
                             <Width>800</Width>
                             <Height>500</Height>
                         </ColourMapProducer>
+                        <RewardForTouchingBlockType>
+                            <Block type="log" reward="10000"/>
+                        </RewardForTouchingBlockType>
                         <AgentQuitFromReachingCommandQuota total="'''+str(MAX_EPISODE_STEPS)+'''" />
-                        <RewardForMissionEnd rewardForDeath="-10">
-                            <Reward description="found tree" reward="10000"/>
+                        <RewardForMissionEnd>
+                            <Reward description="found tree" reward="0"/>
                         </RewardForMissionEnd>
                         <ObservationFromNearbyEntities>
                             <Range name="entities" xrange="300" yrange="60" zrange="60"/>
