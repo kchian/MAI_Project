@@ -34,10 +34,10 @@ LEARNING_RATE = 1e-4
 EPSILON_DECAY = .999**LEARN_FREQUENCY
 
 SIZE = 10 #Dimensions of map
-PATH = r"C:\Users\ldkea\Desktop\Malmo-0.37.0-Windows-64bit_withBoost_Python3.7\Malmo-0.37.0-Windows-64bit_withBoost_Python3.7\Python_Examples\MAI_Project\state_dict_model%d.pt" #Path to save model
+PATH = r"state_dict_model%d.pt" #Path to save model
 LOAD = False
 MODELNUM = 1000
-MODEL = r"C:\Users\ldkea\Desktop\Malmo-0.37.0-Windows-64bit_withBoost_Python3.7\Malmo-0.37.0-Windows-64bit_withBoost_Python3.7\Python_Examples\MAI_Project\state_dict_model%d.pt"
+MODEL = r"state_dict_model%d.pt"
 COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
 
 ACTION_DICT = {
@@ -57,9 +57,8 @@ def init_malmo(agent_host):
     #Record Mission 
     my_mission = MalmoPython.MissionSpec(getXML(MAX_EPISODE_STEPS, SIZE), True)
     my_mission_record = MalmoPython.MissionRecordSpec()
-    my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
-    #my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
-
+    # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
+    # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
     my_mission.requestVideoWithDepth(800, 500)
     my_mission.setViewpoint(0)
 
@@ -122,7 +121,6 @@ def prepare_batch(replay_buffer):
     reward = torch.tensor([x[3] for x in batch_data], dtype=torch.float)
     print(".", end = "")
     done = torch.tensor([x[4] for x in batch_data], dtype=torch.float)
-    print("Done")
     #print(obs, action, next_obs, reward, done)
     return obs, action, next_obs, reward, done
   
@@ -160,7 +158,7 @@ def log_returns(steps, returns):
     returns_smooth = np.convolve(returns, box, mode='same')
     plt.clf()
     plt.plot(steps, returns_smooth)
-    plt.title('Diamond Collector')
+    plt.title('Reach the tree')
     plt.ylabel('Return')
     plt.xlabel('Steps')
     plt.savefig('returns.png')
@@ -181,12 +179,6 @@ def get_action(obs, q_network, epsilon):
     Returns:
         action (int): chosen action [0, action_size)
     """
-    #------------------------------------
-    #
-    #   TODO: Implement e-greedy policy
-    #
-    #-------------------------------------
-
     # Prevent computation graph from being calculated
     with torch.no_grad():
         # Calculate Q-values fot each action
@@ -331,6 +323,7 @@ def train(agent_host):
 
             if last>=TARGET_UPDATE:
                 target_network.load_state_dict(q_network.state_dict())
+
         num_episode += 1
         returns.append(episode_return)
         steps.append(global_step)

@@ -1,2 +1,3 @@
 *.tgz
 mission_records/*
+__pycache__/*
