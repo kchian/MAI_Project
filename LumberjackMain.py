@@ -35,13 +35,16 @@ LEARNING_RATE = 1e-4
 
 SIZE = 10 #Dimensions of map
 PATH = r"Models\state_dict_model%d.pt" #Path to save model
+LOAD = False
+MODELNUM = 1
+MODEL = r"Models\state_dict_model%d.pt"
 COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
 
 ACTION_DICT = {
-    0: 'move 1',  # Move one block forward
-    1: 'turn 1',  # Turn 90 degrees to the right
-    2: 'turn -1',  # Turn 90 degrees to the left
-    3: 'attack 1',  # Destroy block
+    0: 'move 1',  # Move forward
+    1: 'turn 0.25',  # Turn 22.5 degrees to the right
+    2: 'turn -0.25',  # Turn 22.5 degrees to the left
+    # 3: 'attack 1',  # Destroy block
     # 4: 'pitch 1',
     # 5: 'pitch -1',
     # 6: 'move 0',
@@ -200,9 +203,14 @@ def train(agent_host):
     Args:
         agent_host (MalmoPython.AgentHost)
     """
-    # Init networks
+    #Init networks
     q_network = QNetwork((4, 800, 500), len(ACTION_DICT))
     target_network = QNetwork((4, 800, 500), len(ACTION_DICT))
+    if LOAD:
+        q_network.load_state_dict(torch.load(MODEL%MODELNUM))
+        target_network.load_state_dict(torch.load(MODEL%(MODELNUM + 10000)))
+        q_network.eval()
+        target_network.eval()
     target_network.load_state_dict(q_network.state_dict())
 
     # Init optimizer
@@ -238,7 +246,6 @@ def train(agent_host):
         obs = get_observation(world_state)
 
         # Run episode
-        print("\nRunning")
         while world_state.is_mission_running:
             # Get action
             action_idx = get_action(obs, q_network, epsilon)
@@ -301,11 +308,12 @@ def train(agent_host):
         loop.set_description('Episode: {} Steps: {} Time: {:.2f} Loss: {:.2f} Last Return: {:.2f} Avg Return: {:.2f}'.format(
             num_episode, global_step, (time.time() - start_time) / 60, episode_loss, episode_return, avg_return))
 
-        if num_episode > 0 and num_episode % 100 == 0:
-            #ADD save
+        #Save model and log returns every hundred episodes
+        if num_episode % 100==0:
+            print("Saved Model")
             torch.save(q_network.state_dict(), PATH%num_episode)
+            torch.save(target_network.state_dict(), PATH%(num_episode+10000))
             log_returns(steps, returns)
-            print()
 
 
 if __name__ == '__main__':
