@@ -66,7 +66,7 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
                             <Height>500</Height>
                         </ColourMapProducer>
                         <AgentQuitFromReachingCommandQuota total="'''+str(MAX_EPISODE_STEPS)+'''" />
-                        <RewardForMissionEnd rewardForDeath="-100000">
+                        <RewardForMissionEnd rewardForDeath="-10">
                             <Reward description="found tree" reward="10000"/>
                         </RewardForMissionEnd>
                         <ObservationFromNearbyEntities>

@@ -35,12 +35,12 @@ LEARNING_RATE = 1e-4
 
 SIZE = 10 #Dimensions of map
 PATH = r"Models\state_dict_model%d.pt" #Path to save model
-COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
+COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
 
 ACTION_DICT = {
     0: 'move 1',  # Move one block forward
-    1: 'turn 0.25',  # Turn 22.5 degrees to the right
-    #2: 'turn -0.25',  # Turn 22.5 degrees to the left
+    1: 'turn 0.5',  # Turn 22.5 degrees to the right
+    2: 'turn -0.25',  # Turn 22.5 degrees to the left
     # 3: 'attack 1',  # Destroy block
     # 4: 'pitch 1',
     # 5: 'pitch -1',
@@ -54,8 +54,8 @@ def init_malmo(agent_host):
     #Record Mission 
     my_mission = MalmoPython.MissionSpec(getXML(MAX_EPISODE_STEPS, SIZE), True)
     my_mission_record = MalmoPython.MissionRecordSpec()
-    my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
-    my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
+    #my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
+    # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
 
     my_mission.requestVideoWithDepth(800, 500)
     my_mission.setViewpoint(0)
@@ -278,10 +278,10 @@ def train(agent_host):
                     center_x = 400
                     center_y = 250
                     if (f.pixels[center_x*center_y], f.pixels[center_x*center_y*2], f.pixels[center_x*center_y*3]) == COLOURS['wood']:
-                        reward += 100
-                    print('R:' + str(f.pixels[center_x*center_y]))
-                    print('G:' + str(f.pixels[center_x*center_y*2]))
-                    print('B:' + str(f.pixels[center_x*center_y*3]))
+                        reward += 10
+                    # print('R:' + str(f.pixels[center_x*center_y]))
+                    # print('G:' + str(f.pixels[center_x*center_y*2]))
+                    # print('B:' + str(f.pixels[center_x*center_y*3]))
 
             episode_return += reward
 
