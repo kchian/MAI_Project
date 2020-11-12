@@ -24,20 +24,20 @@ from LumberjackQNet import QNetwork
 MAX_EPISODE_STEPS = 30
 MAX_GLOBAL_STEPS = 100000
 REPLAY_BUFFER_SIZE = 10000
-EPSILON_DECAY = .999
 MIN_EPSILON = .1
-BATCH_SIZE = 30
+BATCH_SIZE = 70
 GAMMA = .9
 TARGET_UPDATE = 100
 START_TRAINING = 500
-LEARN_FREQUENCY = 50
+LEARN_FREQUENCY = 100
 LEARNING_RATE = 1e-4
+EPSILON_DECAY = .999**LEARN_FREQUENCY
 
 SIZE = 10 #Dimensions of map
-PATH = r"Models\state_dict_model%d.pt" #Path to save model
-LOAD = True
-MODELNUM = 100
-MODEL = r"Models\state_dict_model%d.pt"
+PATH = r"C:\Users\ldkea\Desktop\Malmo-0.37.0-Windows-64bit_withBoost_Python3.7\Malmo-0.37.0-Windows-64bit_withBoost_Python3.7\Python_Examples\MAI_Project\state_dict_model%d.pt" #Path to save model
+LOAD = False
+MODELNUM = 1000
+MODEL = r"C:\Users\ldkea\Desktop\Malmo-0.37.0-Windows-64bit_withBoost_Python3.7\Malmo-0.37.0-Windows-64bit_withBoost_Python3.7\Python_Examples\MAI_Project\state_dict_model%d.pt"
 COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
 
 ACTION_DICT = {
@@ -58,7 +58,7 @@ def init_malmo(agent_host):
     my_mission = MalmoPython.MissionSpec(getXML(MAX_EPISODE_STEPS, SIZE), True)
     my_mission_record = MalmoPython.MissionRecordSpec()
     my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
-    my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
+    #my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
 
     my_mission.requestVideoWithDepth(800, 500)
     my_mission.setViewpoint(0)
@@ -340,7 +340,7 @@ def train(agent_host):
             num_episode, global_step, (time.time() - start_time) / 60, episode_loss, episode_return, avg_return))
 
         #Save model and log returns every hundred episodes
-        if num_episode % 100==0:
+        if num_episode%25==0:
             print("Saved Model")
             torch.save(q_network.state_dict(), PATH%num_episode)
             torch.save(target_network.state_dict(), PATH%(num_episode+10000))

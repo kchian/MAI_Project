@@ -11,11 +11,11 @@ class QNetwork(nn.Module):
         self.layer1 = nn.Sequential(
             nn.Conv2d(4, 4, kernel_size=10, stride=1, padding=2),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=5, stride=5))
+            nn.AvgPool2d(kernel_size=5, stride=5))
         self.layer2 = nn.Sequential(
             nn.Conv2d(4, 4, kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=5, stride=5))
+            nn.AvgPool2d(kernel_size=5, stride=5))
         self.drop_out = nn.Dropout()
         self.fc1 = nn.Linear(2356, 1000)
         self.fc2 = nn.Linear(1000, action_size)
