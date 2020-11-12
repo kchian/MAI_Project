@@ -185,7 +185,6 @@ def get_action(obs, q_network, epsilon):
         else:
         # Select action with highest Q-value
             action_idx = torch.argmax(action_values).item()
-    print(ACTION_DICT[action_idx])
     return action_idx
 
 def train(agent_host):
@@ -267,7 +266,6 @@ def train(agent_host):
             # Get reward
             reward = 0
             for r in world_state.rewards:
-                print(r)
                 reward += r.getValue()
             for o in world_state.observations:
                 msg = o.text
