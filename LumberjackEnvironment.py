@@ -18,6 +18,8 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
     startX, startZ   = [randint(-SIZE, SIZE) for i in range(2)]
     while treePos==[startX, startZ]:
         startX, startZ   = [randint(-SIZE, SIZE) for i in range(2)]
+    startX+=0.5
+    startZ+=0.5
     return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 <About>
