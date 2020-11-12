@@ -65,6 +65,9 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
                             <Item type="log" reward="1"/>
                             <Item type="dirt" reward="-1"/>
                         </RewardForCollectingItem>
+                        <AgentQuitFromTouchingBlockType>
+                            <Block type="log"/>
+                        </AgentQuitFromTouchingBlockType>
                     </AgentHandlers>
                 </AgentSection>
             </Mission>'''
