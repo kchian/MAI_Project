@@ -6,12 +6,12 @@ title:  Team
 # {{ page.title }}
 
 
-## USER 1
+## Kevin Chian
 ***UCI Net ID***: kchian
 
-## USER 2
+## Luke Keating
 ***UCI Net ID***: keatingl
 
-## USER 3
+## Chris Dang
 ***UCI Net ID***: christhd
 
