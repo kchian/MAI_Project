@@ -2,7 +2,7 @@
 layout: default
 title: Status
 ---
-[![Watch the video](https://img.youtube.com/vi/ANT0ccGVI8Q/maxresdefault.jpg)](https://youtu.be/ANT0ccGVI8Q)
+[![Watch the Status Report](https://img.youtube.com/vi/kHjt8DJ0yOw/maxresdefault.jpg)](https://youtu.be/kHjt8DJ0yOw) 
 ## Project Summary
 Steve will start in a 10x10 grass block platform. There will be at least one tree on this platform for Steve to mine. After all, we've heard that he would like to become a lumberjack. There are several iterative goals for this project. Our first goal is to have Steve find a tree. He may be facing in a direction where there are no trees so Steve will have to turn and find a tree. Our next goal is for Steve to walk towards the tree. You can't mine the tree before you reach it! Finally, we want Steve to mine the tree. Steve will get his input as rgb pixels using ColourMapProducer. We hope to prepare Steve to become a lumberjack worthy of competing with Paul Bunyon.
 
