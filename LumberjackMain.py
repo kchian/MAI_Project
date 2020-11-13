@@ -19,9 +19,10 @@ import numpy as np
 from numpy.random import randint
 from LumberjackEnvironment import getXML
 from LumberjackQNet import QNetwork
+from FrameProcessor import draw_helper
 
 #Hyperparameters
-MAX_EPISODE_STEPS = 30
+MAX_EPISODE_STEPS = 400
 MAX_GLOBAL_STEPS = 100000
 REPLAY_BUFFER_SIZE = 10000
 MIN_EPSILON = .1
@@ -33,14 +34,18 @@ LEARN_FREQUENCY = 100
 LEARNING_RATE = 1e-4
 EPSILON_DECAY = .999**LEARN_FREQUENCY
 
-SIZE = 10 #Dimensions of map
+SIZE = 50 #Dimensions of map
 PATH = os.path.join(r'Models', r"state_dict_model%d.pt") #Path to save model
 LOAD = False
 MODELNUM = 1000
-COLOURS = {'wood': (93, 0, 162), 'leaves':(70, 232, 162), 'grass':(70, 46, 139)}
+
+WIDTH = 800
+HEIGHT = 500
+N_TREES = 10
+COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
 
 ACTION_DICT = {
-    0: 'move .5',  # Move forward
+    0: 'move 1',  # Move forward
     1: 'turn 0.25',  # Turn 22.5 degrees to the right
     2: 'turn -0.25',  # Turn 22.5 degrees to the left
     # 3: 'attack 1',  # Destroy block
@@ -52,13 +57,16 @@ ACTION_DICT = {
     # 9: 'pitch 0'
 }
 
+
+
+
 def init_malmo(agent_host):
     #Record Mission 
-    my_mission = MalmoPython.MissionSpec(getXML(MAX_EPISODE_STEPS, SIZE), True)
+    my_mission = MalmoPython.MissionSpec(getXML(MAX_EPISODE_STEPS, SIZE, N_TREES), True)
     my_mission_record = MalmoPython.MissionRecordSpec()
     # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
     # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
-    my_mission.requestVideoWithDepth(800, 500)
+    my_mission.requestVideoWithDepth(WIDTH, HEIGHT)
     my_mission.setViewpoint(0)
 
     # Attempt to start a mission:
@@ -76,7 +84,7 @@ def init_malmo(agent_host):
     return agent_host
 
 def get_observation(world_state):
-    obs = np.zeros((4, 800, 500))
+    obs = np.zeros((4, WIDTH, HEIGHT))
 
     while world_state.is_mission_running:
         time.sleep(0.1)
@@ -84,14 +92,24 @@ def get_observation(world_state):
         if len(world_state.errors) > 0:
             raise AssertionError('Could not load grid.')
 
-        if len(world_state.video_frames):
+def get_observation(world_state, drawer=None):
+    obs = np.zeros((4, WIDTH, HEIGHT))
+
+    while world_state.is_mission_running:
+        time.sleep(0.1)
+        world_state = agent_host.getWorldState()
+        if len(world_state.errors) > 0:
+            raise AssertionError('Could not load grid.')
+
+        if len(world_state.video_frames):            
             for frame in reversed(world_state.video_frames):
+                if drawer and frame.frametype == MalmoPython.FrameType.COLOUR_MAP:
+                    drawer.showFrame(frame)
                 if frame.channels == 4:
+                    obs = np.reshape(frame.pixels, (4, WIDTH, HEIGHT))
                     break
-            if frame.channels == 4:
-                pixels = world_state.video_frames[0].pixels
-                obs = np.reshape(pixels, (4, 800, 500))
-                break
+            break
+
     return obs
 
 def prepare_batch(replay_buffer):
@@ -202,8 +220,8 @@ def train(agent_host):
         agent_host (MalmoPython.AgentHost)
     """
     #Init networks
-    q_network = QNetwork((4, 800, 500), len(ACTION_DICT))
-    target_network = QNetwork((4, 800, 500), len(ACTION_DICT))
+    q_network = QNetwork((4, WIDTH, HEIGHT), len(ACTION_DICT))
+    target_network = QNetwork((4, WIDTH, HEIGHT), len(ACTION_DICT))
     if LOAD:
         q_network.load_state_dict(torch.load(PATH%MODELNUM))
         q_network.eval()
@@ -231,6 +249,7 @@ def train(agent_host):
         epsilon = .8
     # Begin main loop
     loop = tqdm(total=MAX_GLOBAL_STEPS, position=0, leave=False)
+    drawer = draw_helper()
     while global_step < MAX_GLOBAL_STEPS:
         episode_step = 0
         episode_return = 0
@@ -240,12 +259,13 @@ def train(agent_host):
         # Setup Malmo
         agent_host = init_malmo(agent_host)
         world_state = agent_host.getWorldState()
+        # agent_host.setVideoPolicy(MalmoPython.VideoPolicy.LATEST_FRAME_ONLY)
         while not world_state.has_mission_begun:
             time.sleep(0.1)
             world_state = agent_host.getWorldState()
             for error in world_state.errors:
                 print("\nError:",error.text)
-        obs = get_observation(world_state)
+        obs = get_observation(world_state, drawer)
 
         # Run episode
         while world_state.is_mission_running:
@@ -257,8 +277,7 @@ def train(agent_host):
             agent_host.sendCommand(command)
 
             # If your agent isn't registering reward you may need to increase this
-            time.sleep(.3)
-
+            time.sleep(0.2)
             # We have to manually calculate terminal state to give malmo time to register the end of the mission
             # If you see "commands connection is not open. Is the mission running?" you may need to increase this
             episode_step += 1
@@ -276,7 +295,7 @@ def train(agent_host):
             world_state = agent_host.getWorldState()
             for error in world_state.errors:
                 print("Error:", error.text)
-            next_obs = get_observation(world_state) 
+            next_obs = get_observation(world_state, drawer) 
 
             # Get reward
             reward = 0
@@ -284,15 +303,18 @@ def train(agent_host):
                 reward += r.getValue()
             for o in world_state.observations:
                 msg = o.text
-                observations = json.loads(msg)
-                reward -= observations['distanceFromTree']
-            for f in world_state.video_frames:
-                if f.frametype == MalmoPython.FrameType.COLOUR_MAP:
-                    center_x = 400
-                    center_y = 250
-                    if (f.pixels[center_x*center_y], f.pixels[center_x*center_y*2], f.pixels[center_x*center_y*3]) == COLOURS['wood']:
-                        reward += 10
+                observations = json.loads(msg)                
+                reward -= min([observations['distanceFromTree' + str(i)] for i in range(N_TREES)])
+            # for f in world_state.video_frames:
+            #     if f.frametype == MalmoPython.FrameType.COLOUR_MAP:
+            #         center_x = WIDTH//2
+            #         center_y = HEIGHT//2
+            #         center_px = (f.pixels[center_x*center_y], f.pixels[center_x*center_y*2], f.pixels[center_x*center_y*3])
+            #         if center_px in (COLOURS['wood'], COLOURS['leaves']):
+            #             print('Is that a tree I see? It is!')
+            #             reward += 10
             episode_return += reward
+
             # Store step in replay buffer
             replay_buffer.append((obs, action_idx, next_obs, reward, done))
             obs = next_obs
@@ -311,6 +333,7 @@ def train(agent_host):
                     episode_return-=10000
                     time.sleep(3)
                     break
+        time.sleep(2)
         if global_step > START_TRAINING and last>=LEARN_FREQUENCY:
             print("Learning")
             last = 0
