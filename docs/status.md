@@ -2,7 +2,7 @@
 layout: default
 title: Status
 ---
-##Project Summary
+##Project Summary##
 
 ##Approach
 
