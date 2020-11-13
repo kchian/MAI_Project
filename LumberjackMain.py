@@ -34,11 +34,10 @@ LEARNING_RATE = 1e-4
 EPSILON_DECAY = .999**LEARN_FREQUENCY
 
 SIZE = 10 #Dimensions of map
-PATH = r"state_dict_model%d.pt" #Path to save model
+PATH = os.path.join(r'Models', r"state_dict_model%d.pt") #Path to save model
 LOAD = False
 MODELNUM = 1000
-MODEL = r"state_dict_model%d.pt"
-COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
+COLOURS = {'wood': (93, 0, 162), 'leaves':(70, 232, 162), 'grass':(70, 46, 139)}
 
 ACTION_DICT = {
     0: 'move .5',  # Move forward

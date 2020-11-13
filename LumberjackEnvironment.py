@@ -13,7 +13,7 @@ def drawTree(coord):
         tree+=BLOCK(x, y+2, z, "log")
     return tree
 
-def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
+def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50):
     treePos = [randint(-SIZE, SIZE) for i in range(2)]
     startX, startZ   = [randint(-SIZE, SIZE) for i in range(2)]
     while treePos==[startX, startZ]:
