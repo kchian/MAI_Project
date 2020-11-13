@@ -20,24 +20,30 @@ from numpy.random import randint
 from LumberjackEnvironment import getXML
 from LumberjackQNet import QNetwork
 
+from multiprocessing import Process
+
+from math import log
+
 #Hyperparameters
 MAX_EPISODE_STEPS = 30
 MAX_GLOBAL_STEPS = 100000
 REPLAY_BUFFER_SIZE = 10000
 MIN_EPSILON = .1
-BATCH_SIZE = 70
+BATCH_SIZE = 600
 GAMMA = .9
 TARGET_UPDATE = 100
 START_TRAINING = 500
-LEARN_FREQUENCY = 100
+LEARN_FREQUENCY = 1000
 LEARNING_RATE = 1e-4
-EPSILON_DECAY = .999**LEARN_FREQUENCY
+EPSILON_DECAY = .9
+version = 2.1
 
 SIZE = 10 #Dimensions of map
-PATH = r"state_dict_model%d.pt" #Path to save model
-LOAD = False
-MODELNUM = 1000
-MODEL = r"state_dict_model%d.pt"
+PATH = r"c:/Users/ldkea/Desktop/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Python_Examples/MAI_Project/Models/" + str(version) + "state_dict_model%d.pt" #Path to save model
+LOAD = True
+MODELNUM = 470
+LOAD_EPSILON  = 1
+MODEL = r"c:/Users/ldkea/Desktop/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Python_Examples/MAI_Project/Models/" + str(version) + "state_dict_model%d.pt"
 COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
 
 ACTION_DICT = {
@@ -63,10 +69,11 @@ def init_malmo(agent_host):
     my_mission.setViewpoint(0)
 
     # Attempt to start a mission:
-    max_retries = 1
+    max_retries = 3
     for retry in range(max_retries):
         try:
             agent_host.startMission( my_mission, my_mission_record )
+            break
         except RuntimeError as e:
             if retry == max_retries - 1:
                 print("Error starting mission:",e)
@@ -146,7 +153,7 @@ def learn(batch, optim, q_network, target_network):
 
     return loss.item()
 
-def log_returns(steps, returns):
+def log_returns(steps, returns, num_episode):
     """
     Log the current returns as a graph and text file
 
@@ -161,9 +168,9 @@ def log_returns(steps, returns):
     plt.title('Reach the tree')
     plt.ylabel('Return')
     plt.xlabel('Steps')
-    plt.savefig('returns.png')
+    plt.savefig('returns%.2f-%d.png'%(version, num_episode))
 
-    with open('returns.txt', 'w') as f:
+    with open('returns%.2f-%d.txt'%(version, num_episode), 'w') as f:
         for value in returns:
             f.write("{}\n".format(value)) 
 
@@ -205,9 +212,9 @@ def train(agent_host):
     q_network = QNetwork((4, 800, 500), len(ACTION_DICT))
     target_network = QNetwork((4, 800, 500), len(ACTION_DICT))
     if LOAD:
-        q_network.load_state_dict(torch.load(PATH%MODELNUM))
+        q_network.load_state_dict(torch.load(MODEL%MODELNUM))
         q_network.eval()
-        target_network.load_state_dict(torch.load(PATH%(MODELNUM+10000)))
+        target_network.load_state_dict(torch.load(MODEL%(MODELNUM+10000)))
         target_network.eval()
     target_network.load_state_dict(q_network.state_dict())
 
@@ -221,6 +228,8 @@ def train(agent_host):
     global_step = 0
     last = 0
     num_episode = 0
+    if LOAD:
+        num_episode = MODELNUM
     epsilon = 1
     start_time = time.time()
     returns = []
@@ -228,7 +237,7 @@ def train(agent_host):
     
     if LOAD:
         global_step = 300
-        epsilon = .8
+        epsilon = LOAD_EPSILON
     # Begin main loop
     loop = tqdm(total=MAX_GLOBAL_STEPS, position=0, leave=False)
     while global_step < MAX_GLOBAL_STEPS:
@@ -236,109 +245,118 @@ def train(agent_host):
         episode_return = 0
         episode_loss = 0
         done = False
-
-        # Setup Malmo
-        agent_host = init_malmo(agent_host)
-        world_state = agent_host.getWorldState()
-        while not world_state.has_mission_begun:
-            time.sleep(0.1)
+        try:
+            # Setup Malmo
+            agent_host = init_malmo(agent_host)
             world_state = agent_host.getWorldState()
-            for error in world_state.errors:
-                print("\nError:",error.text)
-        obs = get_observation(world_state)
+            while not world_state.has_mission_begun:
+                time.sleep(0.1)
+                world_state = agent_host.getWorldState()
+                for error in world_state.errors:
+                    print("\nError:",error.text)
+            obs = get_observation(world_state)
 
-        # Run episode
-        while world_state.is_mission_running:
-            # Get action
-            action_idx = get_action(obs, q_network, epsilon)
-            command = ACTION_DICT[action_idx]
+            # Run episode
+            while world_state.is_mission_running:
+                # Get action
+                action_idx = get_action(obs, q_network, epsilon)
+                command = ACTION_DICT[action_idx]
 
-            # Take step
-            agent_host.sendCommand(command)
+                # Take step
+                agent_host.sendCommand(command)
 
-            # If your agent isn't registering reward you may need to increase this
-            time.sleep(.3)
+                # If your agent isn't registering reward you may need to increase this
+                time.sleep(.3)
 
-            # We have to manually calculate terminal state to give malmo time to register the end of the mission
-            # If you see "commands connection is not open. Is the mission running?" you may need to increase this
-            episode_step += 1
-            if episode_step >= MAX_EPISODE_STEPS:
-                done = True
-                time.sleep(2)
-                '''
-                    or \
-                (obs[0, int(OBS_SIZE/2)-1, int(OBS_SIZE/2)] == 1 and \
-                obs[1, int(OBS_SIZE/2)-1, int(OBS_SIZE/2)] == 0 and \
-                command == 'move 1'):
-                '''
+                # We have to manually calculate terminal state to give malmo time to register the end of the mission
+                # If you see "commands connection is not open. Is the mission running?" you may need to increase this
+                episode_step += 1
+                if episode_step >= MAX_EPISODE_STEPS:
+                    done = True
+                    time.sleep(2)
+                    '''
+                        or \
+                    (obs[0, int(OBS_SIZE/2)-1, int(OBS_SIZE/2)] == 1 and \
+                    obs[1, int(OBS_SIZE/2)-1, int(OBS_SIZE/2)] == 0 and \
+                    command == 'move 1'):
+                    '''
 
-            # Get next observation
-            world_state = agent_host.getWorldState()
-            for error in world_state.errors:
-                print("Error:", error.text)
-            next_obs = get_observation(world_state) 
+                # Get next observation
+                world_state = agent_host.getWorldState()
+                for error in world_state.errors:
+                    print("Error:", error.text)
+                next_obs = get_observation(world_state) 
 
-            # Get reward
-            reward = 0
-            for r in world_state.rewards:
-                reward += r.getValue()
-            for o in world_state.observations:
-                msg = o.text
-                observations = json.loads(msg)
-                reward -= observations['distanceFromTree']
-            for f in world_state.video_frames:
-                if f.frametype == MalmoPython.FrameType.COLOUR_MAP:
-                    center_x = 400
-                    center_y = 250
-                    if (f.pixels[center_x*center_y], f.pixels[center_x*center_y*2], f.pixels[center_x*center_y*3]) == COLOURS['wood']:
-                        reward += 10
-            episode_return += reward
-            # Store step in replay buffer
-            replay_buffer.append((obs, action_idx, next_obs, reward, done))
-            obs = next_obs
+                # Get reward
+                reward = 0
+                for r in world_state.rewards:
+                    reward += r.getValue()
+                for o in world_state.observations:
+                    msg = o.text
+                    observations = json.loads(msg)
+                    reward -= observations['distanceFromTree']
+                    #reward += 10000/max(observations['distanceFromTree'], 1)
+                for f in world_state.video_frames:
+                    if f.frametype == MalmoPython.FrameType.COLOUR_MAP:
+                        center_x = 400
+                        center_y = 250
+                        if (f.pixels[center_x*center_y], f.pixels[center_x*center_y*2], f.pixels[center_x*center_y*3]) == COLOURS['wood']:
+                            reward += 10
+                episode_return += reward
+                # Store step in replay buffer
+                replay_buffer.append((obs, action_idx, next_obs, reward, done))
+                obs = next_obs
 
-            # Learn
-            global_step += 1
-            last+=1
+                # Learn
+                global_step += 1
+                last+=1
 
-            #Sleep until death if falling
-            if world_state.observations:
-                msg = world_state.observations[-1].text
-                observations = json.loads(msg)
-                if observations['YPos']<-2:
-                    obs, action_idx, next_obs, reward, done = replay_buffer[-1]
-                    replay_buffer.append((obs, action_idx, next_obs, reward-10000, done))
-                    episode_return-=10000
-                    time.sleep(3)
-                    break
-        if global_step > START_TRAINING and last>=LEARN_FREQUENCY:
-            print("Learning")
-            last = 0
-            batch = prepare_batch(replay_buffer)
-            loss = learn(batch, optim, q_network, target_network)
-            episode_loss += loss
+                #Sleep until death if falling
+                if world_state.observations:
+                    msg = world_state.observations[-1].text
+                    observations = json.loads(msg)
+                    if observations['YPos']<-2:
+                        obs, action_idx, next_obs, reward, done = replay_buffer[-1]
+                        replay_buffer.append((obs, action_idx, next_obs, reward-300, done))
+                        episode_return-=300
+                        time.sleep(3)
+                        break
+            if global_step > START_TRAINING and last>=LEARN_FREQUENCY:
+                print("\nLearning")
+                last = 0
+                batch = prepare_batch(replay_buffer)
+                loss = learn(batch, optim, q_network, target_network)
+                episode_loss += loss
 
-            if epsilon > MIN_EPSILON:
-                epsilon *= EPSILON_DECAY
+                if epsilon > MIN_EPSILON:
+                    epsilon *= EPSILON_DECAY
+                    epsilon = max(epsilon, MIN_EPSILON)
 
-            if last>=TARGET_UPDATE:
-                target_network.load_state_dict(q_network.state_dict())
+                if last>=TARGET_UPDATE:
+                    target_network.load_state_dict(q_network.state_dict())
 
-        num_episode += 1
-        returns.append(episode_return)
-        steps.append(global_step)
-        avg_return = sum(returns[-min(len(returns), 10):]) / min(len(returns), 10)
-        loop.update(episode_step)
-        loop.set_description('Episode: {} Steps: {} Time: {:.2f} Loss: {:.2f} Last Return: {:.2f} Avg Return: {:.2f}'.format(
-            num_episode, global_step, (time.time() - start_time) / 60, episode_loss, episode_return, avg_return))
+            num_episode += 1
+            returns.append(episode_return)
+            steps.append(global_step)
+            avg_return = sum(returns[-min(len(returns), 10):]) / min(len(returns), 10)
+            loop.update(episode_step)
+            loop.set_description('Episode: {} Steps: {} Time: {:.2f} Loss: {:.2f} Last Return: {:.2f} Avg Return: {:.2f}'.format(
+                num_episode, global_step, (time.time() - start_time) / 60, episode_loss, episode_return, avg_return)+" Epsilon: " + str(epsilon))
 
-        #Save model and log returns every hundred episodes
-        if num_episode%25==0:
-            print("Saved Model")
-            torch.save(q_network.state_dict(), PATH%num_episode)
-            torch.save(target_network.state_dict(), PATH%(num_episode+10000))
-            log_returns(steps, returns)
-
+            #Save model and log returns every hundred episodes
+            if num_episode%25==0:
+                print("Saved Model")
+                torch.save(q_network.state_dict(), PATH%num_episode)
+                torch.save(target_network.state_dict(), PATH%(num_episode+10000))
+                try:
+                    log_returns(steps, returns, num_episode)
+                except:
+                    pass
+        except KeyboardInterrupt:
+                print("Saved Model")
+                torch.save(q_network.state_dict(), PATH%num_episode)
+                torch.save(target_network.state_dict(), PATH%(num_episode+10000))
+                break
 
 if __name__ == '__main__':
     # Create default Malmo objects:

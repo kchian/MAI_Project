@@ -67,7 +67,7 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
                             <Height>500</Height>
                         </ColourMapProducer>
                         <RewardForTouchingBlockType>
-                            <Block type="log" reward="10000"/>
+                            <Block type="log" reward="150"/>
                         </RewardForTouchingBlockType>
                         <AgentQuitFromReachingCommandQuota total="'''+str(MAX_EPISODE_STEPS)+'''" />
                         <RewardForMissionEnd>
