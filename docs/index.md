@@ -15,7 +15,7 @@ Our team spawns in a discord server every Monday at 10AM.
 
 The goal is to train a reinforcement learning agent to locate, track, and reach a pig around obstacles like trees and lava.
   
-![The Target](pig.PNG) ![The Destruction](pig2.PNG)
+![The Target](images/pig.PNG) ![The Destruction](images/pig2.PNG)
   
 As a first step, we evaluated our AI purely on its ability to stay on the platform and touch a tree we place in a 10x10 floating world. The baseline in this scenario would be an AI that doesn’t do anything and wanders aimlessly. Our AI uses Malmo's ColourMap Video Producer to get RGB frames where each block type is assigned a unique color. These frames were used to determine whether the agent was looking towards a tree, and an appropriate reward was given. The AI would ideally learn to turn around to find the tree, similar to a radar. Once it finds the tree, walks towards it, and touches it, the mission ends in success. 
 
