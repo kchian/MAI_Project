@@ -17,7 +17,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from numpy.random import randint
-from LumberjackEnvironment import getXML
+#from LumberjackEnvironment import getXML
+from LumberFense import getXML
 from LumberjackQNet import QNetwork
 
 from multiprocessing import Process
@@ -29,21 +30,22 @@ MAX_EPISODE_STEPS = 30
 MAX_GLOBAL_STEPS = 100000
 REPLAY_BUFFER_SIZE = 10000
 MIN_EPSILON = .1
-BATCH_SIZE = 600
+BATCH_SIZE = 30
 GAMMA = .9
 TARGET_UPDATE = 100
 START_TRAINING = 500
-LEARN_FREQUENCY = 1000
+LEARN_FREQUENCY = 100
 LEARNING_RATE = 1e-4
 EPSILON_DECAY = .9
-version = 2.1
+version = 3.0
+
 
 SIZE = 10 #Dimensions of map
 PATH = r"c:/Users/ldkea/Desktop/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Python_Examples/MAI_Project/Models/" + str(version) + "state_dict_model%d.pt" #Path to save model
 LOAD = True
-MODELNUM = 470
-LOAD_EPSILON  = 1
-MODEL = r"c:/Users/ldkea/Desktop/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Python_Examples/MAI_Project/Models/" + str(version) + "state_dict_model%d.pt"
+MODELNUM = 692
+LOAD_EPSILON  = .2
+MODEL = r"c:/Users/ldkea/Desktop/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Python_Examples/MAI_Project/Models/" + str(version- .9) + "state_dict_model%d.pt"
 COLOURS = {'wood': (162, 0, 93), 'leaves':(162, 232, 70), 'grass':(139, 46, 70)}
 
 ACTION_DICT = {
@@ -208,6 +210,8 @@ def train(agent_host):
     Args:
         agent_host (MalmoPython.AgentHost)
     """
+    TOUCHED = 0
+    TIMES = 0
     #Init networks
     q_network = QNetwork((4, 800, 500), len(ACTION_DICT))
     target_network = QNetwork((4, 800, 500), len(ACTION_DICT))
@@ -294,7 +298,10 @@ def train(agent_host):
                 for o in world_state.observations:
                     msg = o.text
                     observations = json.loads(msg)
-                    reward -= observations['distanceFromTree']
+                    try:
+                        reward -= observations['distanceFromTree']
+                    except:
+                        break
                     #reward += 10000/max(observations['distanceFromTree'], 1)
                 for f in world_state.video_frames:
                     if f.frametype == MalmoPython.FrameType.COLOUR_MAP:
@@ -305,6 +312,8 @@ def train(agent_host):
                 episode_return += reward
                 # Store step in replay buffer
                 replay_buffer.append((obs, action_idx, next_obs, reward, done))
+                if reward > 50:
+                    TOUCHED+=1
                 obs = next_obs
 
                 # Learn
@@ -341,7 +350,9 @@ def train(agent_host):
             avg_return = sum(returns[-min(len(returns), 10):]) / min(len(returns), 10)
             loop.update(episode_step)
             loop.set_description('Episode: {} Steps: {} Time: {:.2f} Loss: {:.2f} Last Return: {:.2f} Avg Return: {:.2f}'.format(
-                num_episode, global_step, (time.time() - start_time) / 60, episode_loss, episode_return, avg_return)+" Epsilon: " + str(epsilon))
+                num_episode, global_step, (time.time() - start_time) / 60, episode_loss, episode_return, avg_return))
+            TIMES+=1
+            print("\nSuccess Rate: ", TOUCHED/TIMES)
 
             #Save model and log returns every hundred episodes
             if num_episode%25==0:
