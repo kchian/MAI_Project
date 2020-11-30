@@ -13,11 +13,24 @@ def drawTree(coord):
         tree+=BLOCK(x, y+2, z, "log")
     return tree
 
-def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50):
+def createMarker(index, coord):
+    return '<Marker name="Tree' + str(index) + '" x="'+str(coord[0])+'" y="0" z="'+str(coord[1])+'"/>'
+
+def getTree(blocklist, SIZE):
     treePos = [randint(-SIZE, SIZE) for i in range(2)]
-    startX, startZ   = [randint(-SIZE, SIZE) for i in range(2)]
-    while treePos==[startX, startZ]:
-        startX, startZ   = [randint(-SIZE, SIZE) for i in range(2)]
+    while treePos in blocklist:
+        treePos  = [randint(-SIZE, SIZE) for i in range(2)]
+    return treePos
+
+def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50, N_TREES = 10):
+    
+    startX, startZ = [randint(-SIZE, SIZE) for i in range(2)]
+    blocklist = [[startX, startZ]]
+    trees = []
+    for i in range(N_TREES):
+        treePos = getTree(blocklist, SIZE)
+        blocklist.append(treePos)
+        trees.append(treePos)
     startX+=0.5
     startZ+=0.5
     return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
@@ -39,7 +52,7 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50):
                             "<DrawCuboid x1='{}' x2='{}' y1='0' y2='10' z1='{}' z2='{}' type='air'/>".format(-SIZE-100, SIZE+100, -SIZE-100, SIZE+100) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='-1' z1='{}' z2='{}' type='grass'/>".format(-SIZE*2, SIZE*2, -SIZE*2, SIZE*2) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            drawTree(treePos) + \
+                            "".join(drawTree(coord) for coord in trees) + \
                             '''
                         </DrawingDecorator>
                         <ServerQuitWhenAnyAgentFinishes/>
@@ -76,8 +89,9 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50):
                         <ObservationFromNearbyEntities>
                             <Range name="entities" xrange="300" yrange="60" zrange="60"/>
                         </ObservationFromNearbyEntities>
-                        <ObservationFromDistance>
-                            <Marker name="Tree" x="'''+str(treePos[0])+'''" y="0" z="'''+str(treePos[1])+'''"/>
+                        <ObservationFromDistance>''' + \
+                            ''.join(createMarker(index, coord) for index, coord in enumerate(trees)) + \
+                            '''
                         </ObservationFromDistance>
                         <AgentQuitFromTouchingBlockType>
                             <Block type="log"/>
