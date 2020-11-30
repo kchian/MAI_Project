@@ -18,7 +18,7 @@ import numpy as np
 
 #imports added for Ray
 import gym, ray
-from gym.spaces import Box
+from gym.spaces import Box, Discrete
 from ray.rllib.agents import ppo
 #-----------------------
 
@@ -53,14 +53,13 @@ class Lumberjack(gym.Env):
         self.max_episode_steps = MAX_EPISODE_STEPS
         self.log_frequency = 10
         self.action_dict = {
-            0: 'move .5',  # Move forward
-            1: 'turn 0.25',  # Turn 22.5 degrees to the right
-            2: 'turn -0.25',  # Turn 22.5 degrees to the left
+            0: 'move',  # Move forward
+            1: 'turn', 
         }
 
         # Rllib Parameters
-        self.action_space = Box(len(self.action_dict))
-        self.observation_space = Box(0, 4, shape=(np.prod([4, 800, 500]), ), dtype=np.float32)
+        self.action_space = Box(-1, 1, shape=(len(self.action_dict), ))
+        self.observation_space = Box(0, 255, shape=(np.prod([4, 800, 500]), ), dtype=np.uint8)
 
         # Malmo Parameters
         self.agent_host = MalmoPython.AgentHost()
@@ -87,6 +86,12 @@ class Lumberjack(gym.Env):
         """
         # Reset Malmo
         world_state = self.init_malmo()
+        world_state = self.agent_host.getWorldState()
+        while not world_state.has_mission_begun:
+            time.sleep(1)
+            world_state = self.agent_host.getWorldState()
+            for error in world_state.errors:
+                print("\nError:", error.text)
 
         # Reset Variables
         self.returns.append(self.episode_return)
@@ -120,21 +125,17 @@ class Lumberjack(gym.Env):
         """
 
         # Get Action
-        command = self.action_dict[action]
-        allow_break_action = self.obs[1, int(self.obs_size/2)-1, int(self.obs_size/2)] == 1
-        if command != 'attack 1' or allow_break_action:
-            self.agent_host.sendCommand(command)
-            time.sleep(.1)
-            self.episode_step += 1
+        for i, j in self.action_dict.items():
+            self.agent_host.sendCommand(f"{j} {action[i]:30.1f}")
+        time.sleep(.2)
+        self.episode_step += 1
 
         # Get Done
+        world_state = self.agent_host.getWorldState()
+
         done = False
-        if self.episode_step >= self.max_episode_steps or \
-                (self.obs[0, int(self.obs_size/2)-1, int(self.obs_size/2)] == 1 and \
-                self.obs[1, int(self.obs_size/2)-1, int(self.obs_size/2)] == 0 and \
-                command == 'move 1'):
+        if self.episode_step >= self.max_episode_steps or not world_state.is_mission_running:
             done = True
-            time.sleep(2)  
 
         # Get Observation
         world_state = self.agent_host.getWorldState()
@@ -163,7 +164,7 @@ class Lumberjack(gym.Env):
         max_retries = 1
         for retry in range(max_retries):
             try:
-                agent_host.startMission( my_mission, my_mission_record )
+                self.agent_host.startMission( my_mission, my_mission_record )
             except RuntimeError as e:
                 if retry == max_retries - 1:
                     print("Error starting mission:",e)
@@ -171,23 +172,14 @@ class Lumberjack(gym.Env):
                 else:
                     time.sleep(2)
                     continue
-        return agent_host
+        return self.agent_host
 
-        world_state = self.agent_host.getWorldState()
-        while not world_state.has_mission_begun:
-            time.sleep(0.1)
-            world_state = self.agent_host.getWorldState()
-            for error in world_state.errors:
-                print("\nError:", error.text)
-
-        return world_state
-
-    def get_observation(world_state):
+    def get_observation(self, world_state):
         obs = np.zeros((4, 800, 500))
 
         while world_state.is_mission_running:
             time.sleep(0.1)
-            world_state = agent_host.getWorldState()
+            world_state = self.agent_host.getWorldState()
             if len(world_state.errors) > 0:
                 raise AssertionError('Could not load grid.')
 
@@ -201,7 +193,7 @@ class Lumberjack(gym.Env):
                     break
         return obs
 
-    def log_returns(steps, returns):
+    def log_returns(self):
         """
         Log the current returns as a graph and text file
 
@@ -210,27 +202,57 @@ class Lumberjack(gym.Env):
             returns (list): list of total return of each episode
         """
         box = np.ones(10) / 10
-        returns_smooth = np.convolve(returns, box, mode='same')
+        returns_smooth = np.convolve(self.returns, box, mode='same')
         plt.clf()
-        plt.plot(steps, returns_smooth)
+        plt.plot(self.steps, returns_smooth)
         plt.title('Reach the tree')
         plt.ylabel('Return')
         plt.xlabel('Steps')
         plt.savefig('returns.png')
 
         with open('returns.txt', 'w') as f:
-            for value in returns:
+            for value in self.returns:
                 f.write("{}\n".format(value)) 
  
 
 
 if __name__ == '__main__':
     ray.init()
-    trainer = ppo.PPOTrainer(env=DiamondCollector, config={
+    trainer = ppo.PPOTrainer(env=Lumberjack, config={
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 0            # We aren't using parallelism
+        'num_workers': 0,            # We aren't using parallelism
+
+        # Whether to write episode stats and videos to the agent log dir. This is
+        # typically located in ~/ray_results.
+        "monitor": False,
+        # Set the ray.rllib.* log level for the agent process and its workers.
+        # Should be one of DEBUG, INFO, WARN, or ERROR. The DEBUG level will also
+        # periodically print out summaries of relevant internal dataflow (this is
+        # also printed out once at startup at the INFO level). When using the
+        # `rllib train` command, you can also use the `-v` and `-vv` flags as
+        # shorthand for INFO and DEBUG.
+        "log_level": "DEBUG",
+
+        # Training batch size, if applicable. Should be >= rollout_fragment_length.
+        # Samples batches will be concatenated together to a batch of this size,
+        # which is then passed to SGD.
+        "train_batch_size": 200,
+        "gamma": 0.99,
+        # Whether to clip rewards during Policy's postprocessing.
+        # None (default): Clip for Atari only (r=sign(r)).
+        # True: r=sign(r): Fixed rewards -1.0, 1.0, or 0.0.
+        # False: Never clip.
+        # [float value]: Clip at -value and + value.
+        # Tuple[value1, value2]: Clip at value1 and value2.
+        "clip_rewards": None,
+        # Whether to clip actions to the action space's low/high range spec.
+        "clip_actions": True,
+        # Whether to use "rllib" or "deepmind" preprocessors by default
+        "preprocessor_pref": "rllib",
+        # The default learning rate.
+        "lr": 0.0001,
     })
 
     while True:
