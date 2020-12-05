@@ -20,10 +20,11 @@ import numpy as np
 import gym, ray
 from gym.spaces import Box, Discrete
 from ray.rllib.agents import ppo
+from ray.rllib.models import ModelCatalog
 #-----------------------
 
 from LumberjackEnvironment import getXML
-from LumberjackQNet import QNetwork
+from LumberjackQNet import VisionNetwork
 
 #Hyperparameters
 MAX_EPISODE_STEPS = 30
@@ -59,7 +60,7 @@ class Lumberjack(gym.Env):
 
         # Rllib Parameters
         self.action_space = Box(-1, 1, shape=(len(self.action_dict), ))
-        self.observation_space = Box(0, 255, shape=(np.prod([4, 800, 500]), ), dtype=np.uint8)
+        self.observation_space = Box(0, 255, shape=(64, 64, 3), dtype=np.uint8)
 
         # Malmo Parameters
         self.agent_host = MalmoPython.AgentHost()
@@ -84,6 +85,8 @@ class Lumberjack(gym.Env):
         Returns
             observation: <np.array> flattened initial obseravtion
         """
+        time.sleep(3)
+
         # Reset Malmo
         world_state = self.init_malmo()
         world_state = self.agent_host.getWorldState()
@@ -107,8 +110,7 @@ class Lumberjack(gym.Env):
 
         # Get Observation
         self.obs = self.get_observation(world_state)
-
-        return self.obs.flatten()
+        return self.obs
 
     def step(self, action):
         """
@@ -123,7 +125,6 @@ class Lumberjack(gym.Env):
             done: <bool> indicates terminal state
             info: <dict> dictionary of extra information
         """
-
         # Get Action
         for i, j in self.action_dict.items():
             self.agent_host.sendCommand(f"{j} {action[i]:30.1f}")
@@ -149,7 +150,7 @@ class Lumberjack(gym.Env):
             reward += r.getValue()
         self.episode_return += reward
 
-        return self.obs.flatten(), reward, done, dict()
+        return self.obs, reward, done, dict()
 
     def init_malmo(self):
         #Record Mission 
@@ -157,7 +158,7 @@ class Lumberjack(gym.Env):
         my_mission_record = MalmoPython.MissionRecordSpec()
         # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
-        my_mission.requestVideoWithDepth(800, 500)
+        my_mission.requestVideo(64, 64)
         my_mission.setViewpoint(0)
 
         # Attempt to start a mission:
@@ -175,21 +176,20 @@ class Lumberjack(gym.Env):
         return self.agent_host
 
     def get_observation(self, world_state):
-        obs = np.zeros((4, 800, 500))
+        obs = np.zeros((64, 64, 3))
 
         while world_state.is_mission_running:
             time.sleep(0.1)
             world_state = self.agent_host.getWorldState()
             if len(world_state.errors) > 0:
                 raise AssertionError('Could not load grid.')
-
             if len(world_state.video_frames):
                 for frame in reversed(world_state.video_frames):
-                    if frame.channels == 4:
+                    if frame.channels == 3:
                         break
-                if frame.channels == 4:
+                if frame.channels == 3:
                     pixels = world_state.video_frames[0].pixels
-                    obs = np.reshape(pixels, (4, 800, 500))
+                    obs = np.reshape(pixels, (64, 64, 3))
                     break
         return obs
 
@@ -218,12 +218,12 @@ class Lumberjack(gym.Env):
 
 if __name__ == '__main__':
     ray.init()
+    ModelCatalog.register_custom_model("my_model", VisionNetwork)
     trainer = ppo.PPOTrainer(env=Lumberjack, config={
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
         'num_workers': 0,            # We aren't using parallelism
-
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
         "monitor": True,
@@ -238,7 +238,8 @@ if __name__ == '__main__':
         # Training batch size, if applicable. Should be >= rollout_fragment_length.
         # Samples batches will be concatenated together to a batch of this size,
         # which is then passed to SGD.
-        "train_batch_size": 200,
+        "train_batch_size": 16,
+        "sgd_minibatch_size": 16,
         "gamma": 0.99,
         # Whether to clip rewards during Policy's postprocessing.
         # None (default): Clip for Atari only (r=sign(r)).
@@ -253,6 +254,14 @@ if __name__ == '__main__':
         "preprocessor_pref": "rllib",
         # The default learning rate.
         "lr": 0.0001,
+        "model": {
+            "custom_model": "my_model",
+            "dim": 64, 
+            "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [32, 32], 1]],
+            "custom_model_config": {
+                
+            },
+        }
     })
 
     while True:

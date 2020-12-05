@@ -13,7 +13,7 @@ def drawTree(coord):
         tree+=BLOCK(x, y+2, z, "log")
     return tree
 
-def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50):
+def getXML(MAX_EPISODE_STEPS = 1000, SIZE = 5):
     treePos = [randint(-SIZE, SIZE) for i in range(2)]
     startX, startZ   = [randint(-SIZE, SIZE) for i in range(2)]
     while treePos==[startX, startZ]:
@@ -29,7 +29,7 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50):
                     <ServerInitialConditions>
                         <Time>
                             <StartTime>8000</StartTime>
-                            <AllowPassageOfTime>true</AllowPassageOfTime>
+                            <AllowPassageOfTime>false</AllowPassageOfTime>
                         </Time>
                         <Weather>clear</Weather>
                     </ServerInitialConditions>
@@ -40,7 +40,10 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50):
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='-1' z1='{}' z2='{}' type='grass'/>".format(-SIZE*2, SIZE*2, -SIZE*2, SIZE*2) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             drawTree(treePos) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZE-1, SIZE+1, -SIZE-1, SIZE+1) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             '''
+                            
                         </DrawingDecorator>
                         <ServerQuitWhenAnyAgentFinishes/>
                     </ServerHandlers>
@@ -63,8 +66,8 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50):
                         </ContinuousMovementCommands>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>
-                            <Width>800</Width>
-                            <Height>500</Height>
+                            <Width>64</Width>
+                            <Height>64</Height>
                         </ColourMapProducer>
                         <RewardForTouchingBlockType>
                             <Block type="log" reward="10000"/>
