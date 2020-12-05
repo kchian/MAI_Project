@@ -25,9 +25,10 @@ from ray.rllib.models import ModelCatalog
 
 from LumberjackEnvironment import getXML
 from LumberjackQNet import VisionNetwork
+from FrameProcessor import draw_helper
 
 #Hyperparameters
-MAX_EPISODE_STEPS = 30
+MAX_EPISODE_STEPS = 400
 MAX_GLOBAL_STEPS = 100000
 REPLAY_BUFFER_SIZE = 10000
 MIN_EPSILON = .1
@@ -39,11 +40,15 @@ LEARN_FREQUENCY = 100
 LEARNING_RATE = 1e-4
 EPSILON_DECAY = .999**LEARN_FREQUENCY
 
-SIZE = 10 #Dimensions of map
+SIZE = 50 #Dimensions of map
 PATH = os.path.join(r'Models', r"state_dict_model%d.pt") #Path to save model
 LOAD = False
 MODELNUM = 1000
-COLOURS = {'wood': (93, 0, 162), 'leaves':(70, 232, 162), 'grass':(70, 46, 139)}
+
+WIDTH = 800
+HEIGHT = 500
+N_TREES = 10
+COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
 
 
 class Lumberjack(gym.Env):
