@@ -54,9 +54,8 @@ def getXML(MAX_EPISODE_STEPS, SIZE = 5, N_TREES = 10):
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZE-1, SIZE+1, -SIZE-1, SIZE+1) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            drawTree(treePos) + \
                             '''
-                            <DrawEntity x="4.5" y="4" z="3.5" type="Pig"/>
+                            <DrawEntity x="0.5" y="2" z="0.5" type="Pig"/>
                         </DrawingDecorator>
                         <ServerQuitWhenAnyAgentFinishes/>
                     </ServerHandlers>
@@ -64,39 +63,30 @@ def getXML(MAX_EPISODE_STEPS, SIZE = 5, N_TREES = 10):
                 <AgentSection mode="Survival">
                     <Name>MAI Lumberjack</Name>
                     <AgentStart>''' + \
-                        '<Placement x="{}" y="2" z="{}" pitch="0" yaw="0"/>'.format(startX, startZ) + \
+                        '<Placement x="{}" y="2" z="{}" pitch="30" yaw="45"/>'.format(startX, startZ) + \
                         '''
-                        <Inventory>
-                            <InventoryItem slot="0" type="diamond_axe"/>
-                        </Inventory>
                     </AgentStart>
                     <AgentHandlers>
-                        <RewardForTouchingBlockType>
-                            <Block type="grass" reward="1" behaviour="oncePerBlock"/>
-                        </RewardForTouchingBlockType>
                         <ContinuousMovementCommands>
                             <ModifierList type="allow-list">
                                 <command>move</command>
                                 <command>turn</command>
+                                <command>attack</command>
                             </ModifierList>
                         </ContinuousMovementCommands>
+                        <ObservationFromRay/>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>
                             <Width>84</Width>
                             <Height>84</Height>
                         </ColourMapProducer>
-                        <AgentQuitFromTouchingBlockType>
-                            <Block type="log" description="found_goal" />
-                        </AgentQuitFromTouchingBlockType>
+                        <RewardForDamagingEntity>
+                            <Mob type="Pig" reward="1000"/>
+                        </RewardForDamagingEntity>
                         <RewardForMissionEnd rewardForDeath="-1">
-                            <Reward description="found_goal" reward="100" />
                             <Reward description="out_of_time" reward="00" />
                         </RewardForMissionEnd>
                         <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
-                        <ObservationFromDistance>''' + \
-                            ''.join(createMarker(index, coord) for index, coord in enumerate(trees)) + \
-                            '''
-                        </ObservationFromDistance>
                     </AgentHandlers>
                 </AgentSection>
             </Mission>'''

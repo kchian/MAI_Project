@@ -154,7 +154,7 @@ class DiamondCollector(gym.Env):
                     <AgentSection mode="Survival">
                         <Name>CS175DiamondCollector</Name>
                         <AgentStart>
-                            <Placement x="0.5" y="2" z="0.5" pitch="45" yaw="0"/>
+                            <Placement x="0.5" y="2" z="0.5" pitch="85" yaw="65"/>
                             <Inventory>
                                 <InventoryItem slot="0" type="diamond_pickaxe"/>
                             </Inventory>
