@@ -23,7 +23,6 @@ class VisionNetwork(TorchModelV2, nn.Module):
                  model_config: ModelConfigDict, name: str):
         if not model_config.get("conv_filters"):
             model_config["conv_filters"] = get_filter_config(obs_space.shape)
-        print(num_outputs)
         TorchModelV2.__init__(self, obs_space, action_space, num_outputs,
                               model_config, name)
         nn.Module.__init__(self)
@@ -83,6 +82,7 @@ class VisionNetwork(TorchModelV2, nn.Module):
 
             # num_outputs defined. Use that to create an exact
             # `num_output`-sized (1,1)-Conv2D.
+            print(f"NUM OUTPUTS {num_outputs}")
             if num_outputs:
                 in_size = [
                     np.ceil((in_size[0] - kernel[0]) / stride),

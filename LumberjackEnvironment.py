@@ -7,10 +7,11 @@ def drawTree(coord):
     x, z = coord
     tree = ""
     height = 5
-    tree+=CUBOID(x-1, x+1, height+1, height+1, z-1, z+1, "leaves")
-    tree+=CUBOID(x-2, x+2, height-1, height, z-2, z+2, "leaves")
+    # tree+=CUBOID(x-1, x+1, height+1, height+1, z-1, z+1, "leaves")
+    # tree+=CUBOID(x-2, x+2, height-1, height, z-2, z+2, "leaves")
     for y in range(height):
-        tree+=BLOCK(x, y+2, z, "log")
+        #tree+=BLOCK(x, y+2, z, "log")
+        tree+=CUBOID(x-1, x+1, 2, 5, z-1, z+1, "log")
     return tree
 
 def createMarker(index, coord):
@@ -22,10 +23,9 @@ def getTree(blocklist, SIZE):
         treePos  = [randint(-SIZE, SIZE) for i in range(2)]
     return treePos
 
-def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50, N_TREES = 10):
-    
+def getXML(MAX_EPISODE_STEPS, SIZE = 5, N_TREES = 10):
     startX, startZ = [randint(-SIZE, SIZE) for i in range(2)]
-    blocklist = [[startX, startZ]]
+    blocklist = [[i, j] for i in range(startX - 1, startX + 2) for j in range(startZ - 1, startZ + 2) ]
     trees = []
     for i in range(N_TREES):
         treePos = getTree(blocklist, SIZE)
@@ -52,11 +52,11 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50, N_TREES = 10):
                             "<DrawCuboid x1='{}' x2='{}' y1='0' y2='10' z1='{}' z2='{}' type='air'/>".format(-SIZE-100, SIZE+100, -SIZE-100, SIZE+100) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='-1' z1='{}' z2='{}' type='grass'/>".format(-SIZE*2, SIZE*2, -SIZE*2, SIZE*2) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            drawTree(treePos) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZE-1, SIZE+1, -SIZE-1, SIZE+1) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
+                            drawTree(treePos) + \
                             '''
-                            
+                            <DrawEntity x="4.5" y="4" z="3.5" type="Pig"/>
                         </DrawingDecorator>
                         <ServerQuitWhenAnyAgentFinishes/>
                     </ServerHandlers>
@@ -71,6 +71,9 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50, N_TREES = 10):
                         </Inventory>
                     </AgentStart>
                     <AgentHandlers>
+                        <RewardForTouchingBlockType>
+                            <Block type="grass" reward="1" behaviour="oncePerBlock"/>
+                        </RewardForTouchingBlockType>
                         <ContinuousMovementCommands>
                             <ModifierList type="allow-list">
                                 <command>move</command>
@@ -79,27 +82,23 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50, N_TREES = 10):
                         </ContinuousMovementCommands>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>
-                            <Width>64</Width>
-                            <Height>64</Height>
+                            <Width>84</Width>
+                            <Height>84</Height>
                         </ColourMapProducer>
-                        <RewardForTouchingBlockType>
-                            <Block type="log" reward="10000"/>
-                        </RewardForTouchingBlockType>
-                        <AgentQuitFromReachingCommandQuota total="'''+str(MAX_EPISODE_STEPS)+'''" />
-                        <RewardForMissionEnd>
-                            <Reward description="found tree" reward="0"/>
+                        <AgentQuitFromTouchingBlockType>
+                            <Block type="log" description="found_goal" />
+                        </AgentQuitFromTouchingBlockType>
+                        <RewardForMissionEnd rewardForDeath="-1">
+                            <Reward description="found_goal" reward="100" />
+                            <Reward description="out_of_time" reward="00" />
                         </RewardForMissionEnd>
-                        <ObservationFromNearbyEntities>
-                            <Range name="entities" xrange="300" yrange="60" zrange="60"/>
-                        </ObservationFromNearbyEntities>
+                        <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
                         <ObservationFromDistance>''' + \
                             ''.join(createMarker(index, coord) for index, coord in enumerate(trees)) + \
                             '''
                         </ObservationFromDistance>
-                        <AgentQuitFromTouchingBlockType>
-                            <Block type="log"/>
-                        </AgentQuitFromTouchingBlockType>
                     </AgentHandlers>
                 </AgentSection>
             </Mission>'''
     
+#                             <Block type="log" reward="10.0" behaviour="oncePerTimeSpan" cooldownInMs="0.1"/>

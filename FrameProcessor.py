@@ -8,10 +8,10 @@ from tkinter import *
 
 from PIL import Image
 from PIL import ImageTk
-video_width = 800
-video_height = 500
-WIDTH = video_width
-HEIGHT = video_height# + video_width
+video_width = 84
+video_height = 84
+WIDTH = 800
+HEIGHT = 500# + video_width
 
 root = Tk()
 root.wm_title("Depth and ColourMap Example")
@@ -33,7 +33,7 @@ class draw_helper(object):
         self._canvas.delete("all")
         self._dots = []
         self._segments = []
-        self._panorama_image = Image.new('RGB', (800, 500))
+        self._panorama_image = Image.new('RGB', (WIDTH, HEIGHT))
         self._panorama_photo = None
         self._image_handle = None
         self._current_frame = 0
@@ -41,13 +41,19 @@ class draw_helper(object):
 
 
     def showFrame(self, frame):
-        cmap = Image.frombytes('RGB', (video_width, video_height), bytes(frame.pixels))
+        cmap = Image.frombytes('RGB', (video_width, video_height), bytes(frame.pixels)).resize((WIDTH, HEIGHT), Image.ANTIALIAS)
+        c = cmap.getcolors(video_width * video_height)
+        if c:
+            log_pixels = {color: count for count, color in cmap.getcolors(video_width * video_height)}
+        else:
+            log_pixels = {}
         cmap.load()
-        self._panorama_image.paste(cmap, (0, 0, video_width, video_height))
+        self._panorama_image.paste(cmap, (0, 0, WIDTH, HEIGHT))
         self._panorama_photo = ImageTk.PhotoImage(self._panorama_image)
         # And update/create the canvas image:
         if self._image_handle is None:
-            self._image_handle = canvas.create_image(old_div(WIDTH, 2), HEIGHT - (old_div(video_height, 2)), image=self._panorama_photo)
+            self._image_handle = canvas.create_image(0, 0, image=self._panorama_photo, anchor='nw')
         else:
             canvas.itemconfig(self._image_handle, image=self._panorama_photo)
         root.update()
+        return log_pixels[(162, 0, 93)] if (162, 0, 93) in log_pixels else 0
