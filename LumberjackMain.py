@@ -124,9 +124,9 @@ class Lumberjack(gym.Env):
         print(action)
         if np.nan in action:
             print("NAN error again")
-        #self.agent_host.sendCommand(f"move 0.5")
-        for i, j in self.action_dict.items():
-            self.agent_host.sendCommand(f"{j} {(action[i] - 1) / 4:30.1f}")
+        self.agent_host.sendCommand(f"move {(action[0] - 1):30.1f}")
+        self.agent_host.sendCommand(f"turn {(action[1] - 1) / 4:30.1f}")
+
         #self.agent_host.sendCommand(f"move {action}")
         time.sleep(.2)
         self.episode_step += 1
@@ -343,8 +343,18 @@ if __name__ == '__main__':
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 2,            # We aren't using parallelism
+        'num_workers': 3,            # We aren't using parallelism
         "explore": True,
+        # Provide a dict specifying the Exploration object's config.
+        "exploration_config": {
+            # The Exploration class to use. In the simplest case, this is the name
+            # (str) of any class present in the `rllib.utils.exploration` package.
+            # You can also provide the python class directly or the full location
+            # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.
+            # EpsilonGreedy").
+            "type": "StochasticSampling",
+            # Add constructor kwargs here (if any).
+        },
         # "model": {
         #     "custom_model": "my_model",
         #     "dim": 84, 
