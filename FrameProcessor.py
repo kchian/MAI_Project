@@ -8,8 +8,8 @@ from tkinter import *
 
 from PIL import Image
 from PIL import ImageTk
-video_width = 84
-video_height = 84
+video_width = 400
+video_height = 250
 WIDTH = 800
 HEIGHT = 500# + video_width
 
@@ -56,4 +56,5 @@ class draw_helper(object):
         else:
             canvas.itemconfig(self._image_handle, image=self._panorama_photo)
         root.update()
-        return log_pixels[(162, 0, 93)] if (162, 0, 93) in log_pixels else 0
+        #return log_pixels[(162, 0, 93)] if (162, 0, 93) in log_pixels else 0
+        return log_pixels[(1, 57, 110)] if (1, 57, 110) in log_pixels else 0

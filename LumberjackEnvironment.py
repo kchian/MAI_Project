@@ -56,11 +56,11 @@ def getXML(MAX_EPISODE_STEPS, SIZE = 5, N_TREES = 10):
                         <DrawingDecorator>''' + \
                             "<DrawCuboid x1='{}' x2='{}' y1='0' y2='10' z1='{}' z2='{}' type='air'/>".format(-SIZE-100, SIZE+100, -SIZE-100, SIZE+100) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-100, 100, -100, 100) + \
+                            "".join([
+                                "<DrawEntity x='{}' y='2' z='{}' type='Pig'/>".format(randint(-100, 100) + 0.5, randint(-100, 100) + 0.5)
+                                for i in range(250)
+                            ]) + \
                             '''
-                            <DrawEntity x="0.5" y="2" z="9.5" type="Pig"/>
-                            <DrawEntity x="9.5" y="2" z="9.5" type="Pig"/>
-                            <DrawEntity x="9.5" y="2" z="0.5" type="Pig"/>
-                            <DrawEntity x="0.5" y="2" z="0.5" type="Pig"/>
                         </DrawingDecorator>
                         <ServerQuitWhenAnyAgentFinishes/>
                     </ServerHandlers>
@@ -70,6 +70,9 @@ def getXML(MAX_EPISODE_STEPS, SIZE = 5, N_TREES = 10):
                     <AgentStart>''' + \
                         '<Placement x="{}" y="2" z="{}" pitch="30" yaw="45"/>'.format(startX, startZ) + \
                         '''
+                        <Inventory>
+                            <InventoryItem slot="0" type="diamond_axe"/>
+                        </Inventory>
                     </AgentStart>
                     <AgentHandlers>
                         <ContinuousMovementCommands>
@@ -82,9 +85,12 @@ def getXML(MAX_EPISODE_STEPS, SIZE = 5, N_TREES = 10):
                         <ObservationFromRay/>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>
-                            <Width>84</Width>
-                            <Height>84</Height>
+                            <Width>400</Width>
+                            <Height>250</Height>
                         </ColourMapProducer>
+                        <ObservationFromNearbyEntities>
+                            <Range name="entities" xrange="8" yrange="2" zrange="6" />
+                        </ObservationFromNearbyEntities>
                         <RewardForDamagingEntity>
                             <Mob type="Pig" reward="1000"/>
                         </RewardForDamagingEntity>

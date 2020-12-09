@@ -25,6 +25,8 @@ from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 #-----------------------
 from LumberjackEnvironment import getXML
 from LumberjackQNet import VisionNetwork
+from CustomVision import CustomVisionNetwork
+
 from FrameProcessor import draw_helper
 
 #Hyperparameters
@@ -45,8 +47,8 @@ PATH = os.path.join(r'Models', r"state_dict_model%d.pt") #Path to save model
 LOAD = False
 MODELNUM = 1000
 
-WIDTH = 800
-HEIGHT = 500
+WIDTH = 400
+HEIGHT = 250
 N_TREES = 10
 COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
 
@@ -68,7 +70,7 @@ class Lumberjack(gym.Env):
         self.num_outputs = 2
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
         self.action_space = Box(np.array([-1,-1]), np.array([1,1]),dtype=np.float32)
-        self.observation_space = Box(-1.00, 1, shape=(84, 84, 3), dtype=np.float32)
+        self.observation_space = Box(-1.00, 1, shape=(WIDTH, HEIGHT, 3), dtype=np.float32)
 
         # Malmo Parameters
         self.agent_host = MalmoPython.AgentHost()
@@ -140,11 +142,7 @@ class Lumberjack(gym.Env):
             time.sleep(4)
 
         # Get Observation
-        reward = 0
-        for r in world_state.rewards:
-            reward += r.getValue()
 
-        self.episode_return += reward
         for error in world_state.errors:
             print("Error:", error.text)
         for o in world_state.observations:
@@ -157,7 +155,11 @@ class Lumberjack(gym.Env):
                     self.agent_host.sendCommand("attack 1")
                     self.agent_host.sendCommand("attack 0")
         self.obs, log_pixels = self.get_observation(world_state) 
-
+        reward = 0
+        for r in world_state.rewards:
+            reward += r.getValue()
+        reward += log_pixels/20
+        self.episode_return += reward
         # Get Reward
 
 
@@ -169,7 +171,7 @@ class Lumberjack(gym.Env):
         my_mission_record = MalmoPython.MissionRecordSpec()
         # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
-        # my_mission.requestVideo(84, 84)
+        # my_mission.requestVideo(WIDTH, HEIGHT)
         my_mission.setViewpoint(0)
 
         max_retries = 5
@@ -198,7 +200,7 @@ class Lumberjack(gym.Env):
         return world_state
 
     def get_observation(self, world_state):
-        obs = np.zeros((84, 84, 3))
+        obs = np.zeros((WIDTH, HEIGHT, 3))
         if world_state.is_mission_running:
             if len(world_state.errors) > 0:
                 raise AssertionError('Could not load grid.')
@@ -207,10 +209,13 @@ class Lumberjack(gym.Env):
                     if frame.channels == 3:
                         log_pixels = self.drawer.showFrame(frame)
                         pixels = frame.pixels
-                        obs = np.reshape(pixels, (84, 84, 3)).astype(np.uint8)
+                        obs = np.reshape(pixels, (WIDTH, HEIGHT, 3)).astype(np.uint8)
+                        obs = obs / (255 / 2) - 1
                         # scale to between -1, 1
-                        return obs / (255 / 2) - 1, log_pixels
+                        return obs, log_pixels
         return obs, 0
+    
+    
     def log_returns(self):
         """
         Log the current returns as a graph and text file
@@ -275,7 +280,7 @@ def on_postprocess_traj(info):
 
 if __name__ == '__main__':
     ray.init()
-    ModelCatalog.register_custom_model("my_model", VisionNetwork)
+    ModelCatalog.register_custom_model("my_model", CustomVisionNetwork)
     # trainer = ppo.PPOTrainer(env=Lumberjack, config={
     #     'env_config': {},           # No environment parameters to configure
     #     'framework': 'torch',       # Use pyotrch instead of tensorflow
@@ -344,8 +349,10 @@ if __name__ == '__main__':
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 3,            # We aren't using parallelism
+        'num_workers': 1,            # We aren't using parallelism
         "explore": True,
+        "rollout_fragment_length": 400,
+        "train_batch_size": 400,
         # Provide a dict specifying the Exploration object's config.
         "exploration_config": {
             # The Exploration class to use. In the simplest case, this is the name
@@ -358,7 +365,7 @@ if __name__ == '__main__':
         },
         "model": {
             "custom_model": "my_model",
-            "dim": 84, 
+            # "dim": 84, 
             "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
             "no_final_linear": True,
         }
