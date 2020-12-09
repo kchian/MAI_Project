@@ -23,7 +23,6 @@ from ray.rllib.agents import ppo
 from ray.rllib.models import ModelCatalog
 from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 #-----------------------
-
 from LumberjackEnvironment import getXML
 from LumberjackQNet import VisionNetwork
 from FrameProcessor import draw_helper
@@ -67,7 +66,8 @@ class Lumberjack(gym.Env):
 
         # Rllib Parameters
         self.num_outputs = 2
-        self.action_space = Box(0.0 , 2.00, shape=[2], dtype=np.float32)
+        #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
+        self.action_space = Box(np.array([-1,-1]), np.array([1,1]),dtype=np.float32)
         self.observation_space = Box(-1.00, 1, shape=(84, 84, 3), dtype=np.float32)
 
         # Malmo Parameters
@@ -124,8 +124,8 @@ class Lumberjack(gym.Env):
         print(action)
         if np.nan in action:
             print("NAN error again")
-        self.agent_host.sendCommand(f"move {(action[0] - 1):30.1f}")
-        self.agent_host.sendCommand(f"turn {(action[1] - 1) / 4:30.1f}")
+        self.agent_host.sendCommand(f"move {(action[0]):30.1f}")
+        self.agent_host.sendCommand(f"turn {(action[1]):30.1f}")
 
         #self.agent_host.sendCommand(f"move {action}")
         time.sleep(.2)
@@ -151,7 +151,7 @@ class Lumberjack(gym.Env):
             # https://github.com/microsoft/malmo/blob/master/Malmo/samples/Python_examples/hit_test.py
             msg = o.text
             observations = json.loads(msg)
-            if u'LineOfSight' in observations:
+            if u'LineOfSight' in observations and abs(action[1]) < 0.2:
                 los = observations[u'LineOfSight']
                 if los["type"] == "Pig":
                     self.agent_host.sendCommand("attack 1")
@@ -226,9 +226,10 @@ class Lumberjack(gym.Env):
         plt.title('Reach the tree')
         plt.ylabel('Return')
         plt.xlabel('Steps')
-        plt.savefig('returns.png')
+        s = time.time()
+        plt.savefig(f'returns{s}.png')
 
-        with open('returns.txt', 'w') as f:
+        with open(f'returns{s}.txt', 'w') as f:
             for value in self.returns:
                 f.write("{}\n".format(value)) 
 # The callback function
@@ -350,17 +351,17 @@ if __name__ == '__main__':
             # The Exploration class to use. In the simplest case, this is the name
             # (str) of any class present in the `rllib.utils.exploration` package.
             # You can also provide the python class directly or the full location
-            # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.
-            # EpsilonGreedy").
+            # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.EpsilonGreedy").
             "type": "StochasticSampling",
+            # "type": "PerWorkerEpsilonGreedy"
             # Add constructor kwargs here (if any).
         },
-        # "model": {
-        #     "custom_model": "my_model",
-        #     "dim": 84, 
-        #     "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
-        #     "no_final_linear": True,
-        # }
+        "model": {
+            "custom_model": "my_model",
+            "dim": 84, 
+            "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
+            "no_final_linear": True,
+        }
     })
 
     for i in range(1000):
