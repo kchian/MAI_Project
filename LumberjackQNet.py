@@ -1,5 +1,3 @@
-# Source: https://github.com/ray-project/ray/blob/master/rllib/models/torch/visionnet.py
-
 import numpy as np
 from typing import Dict, List
 import gym
@@ -82,7 +80,6 @@ class VisionNetwork(TorchModelV2, nn.Module):
 
             # num_outputs defined. Use that to create an exact
             # `num_output`-sized (1,1)-Conv2D.
-            print(f"NUM OUTPUTS {num_outputs}")
             if num_outputs:
                 in_size = [
                     np.ceil((in_size[0] - kernel[0]) / stride),

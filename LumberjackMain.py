@@ -47,8 +47,8 @@ PATH = os.path.join(r'Models', r"state_dict_model%d.pt") #Path to save model
 LOAD = False
 MODELNUM = 1000
 
-WIDTH = 400
-HEIGHT = 250
+WIDTH = 84
+HEIGHT = 84
 N_TREES = 10
 COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
 
@@ -123,13 +123,12 @@ class Lumberjack(gym.Env):
             info: <dict> dictionary of extra information
         """
         # Get Action
-        print(action)
-        if np.nan in action:
-            print("NAN error again")
+        reward = 0
         self.agent_host.sendCommand(f"move {(action[0]):30.1f}")
         self.agent_host.sendCommand(f"turn {(action[1]):30.1f}")
-
-        #self.agent_host.sendCommand(f"move {action}")
+        # negative reward for spinning
+        reward -= abs(action[1]) * 10000
+        reward += abs(action[0]) * 10
         time.sleep(.2)
         self.episode_step += 1
 
@@ -155,7 +154,6 @@ class Lumberjack(gym.Env):
                     self.agent_host.sendCommand("attack 1")
                     self.agent_host.sendCommand("attack 0")
         self.obs, log_pixels = self.get_observation(world_state) 
-        reward = 0
         for r in world_state.rewards:
             reward += r.getValue()
         reward += log_pixels/20
@@ -349,10 +347,10 @@ if __name__ == '__main__':
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 1,            # We aren't using parallelism
+        'num_workers': 3,            # We aren't using parallelism
         "explore": True,
-        "rollout_fragment_length": 400,
-        "train_batch_size": 400,
+        "rollout_fragment_length": 128,
+        "train_batch_size": 256,
         # Provide a dict specifying the Exploration object's config.
         "exploration_config": {
             # The Exploration class to use. In the simplest case, this is the name

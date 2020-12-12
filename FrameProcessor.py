@@ -8,9 +8,9 @@ from tkinter import *
 
 from PIL import Image
 from PIL import ImageTk
-video_width = 400
-video_height = 250
-WIDTH = 800
+video_width = 84
+video_height = 84
+WIDTH = 500
 HEIGHT = 500# + video_width
 
 root = Tk()

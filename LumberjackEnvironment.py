@@ -85,8 +85,8 @@ def getXML(MAX_EPISODE_STEPS, SIZE = 5, N_TREES = 10):
                         <ObservationFromRay/>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>
-                            <Width>400</Width>
-                            <Height>250</Height>
+                            <Width>84</Width>
+                            <Height>84</Height>
                         </ColourMapProducer>
                         <ObservationFromNearbyEntities>
                             <Range name="entities" xrange="8" yrange="2" zrange="6" />

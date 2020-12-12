@@ -42,7 +42,7 @@ class CustomVisionNetwork(TorchModelV2, nn.Module):
             nn.Flatten(),
             nn.Dropout(),
             # PrintLayer(),
-            nn.Linear(336, 256)
+            nn.Linear(12, 256)
         )
         # Holds the current "base" output (before logits layer).
         self._features = None
