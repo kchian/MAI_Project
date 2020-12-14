@@ -376,7 +376,7 @@ if __name__ == '__main__':
     # })
     # os.chdir(r'')
     # print(os.listdir())
-    trainer.restore(r"C:\Users\Kevin\ray_results\dude\rip")
+    trainer.restore(r"C:\Users\Kevin\ray_results\turn\rip")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()
