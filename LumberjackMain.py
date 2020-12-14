@@ -131,7 +131,8 @@ class Lumberjack(gym.Env):
 
         # negative reward for spinning
         reward -= 1# abs(action[0]) * 1
-        time.sleep(.2)
+        # Try upping this
+        time.sleep(1)
         self.episode_step += 1
 
         # Get Done
