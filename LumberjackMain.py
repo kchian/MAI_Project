@@ -67,10 +67,10 @@ class Lumberjack(gym.Env):
         }
 
         # Rllib Parameters
-        self.num_outputs = 2
+        self.num_outputs = 1
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
-        self.action_space = Box(np.array([-1,-1]), np.array([1,1]),dtype=np.float32)
-        self.observation_space = Box(-1.00, 1, shape=(3 * WIDTH * HEIGHT,), dtype=np.float32)
+        self.action_space = Box(np.array([-1]), np.array([1]),dtype=np.float32)
+        self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
 
 
         # Malmo Parameters
@@ -125,11 +125,10 @@ class Lumberjack(gym.Env):
         """
         # Get Action
         reward = 0
+        print(action)
         self.agent_host.sendCommand(f"move {(action[0]/4):30.1f}")
-        self.agent_host.sendCommand(f"turn {(action[1]/4):30.1f}")
         # negative reward for spinning
-        reward -= abs(action[1]) * 10
-        reward += abs(action[0]) * 10
+        reward -= 1# abs(action[0]) * 1
         time.sleep(.2)
         self.episode_step += 1
 
@@ -149,11 +148,11 @@ class Lumberjack(gym.Env):
             # https://github.com/microsoft/malmo/blob/master/Malmo/samples/Python_examples/hit_test.py
             msg = o.text
             observations = json.loads(msg)
-            if u'LineOfSight' in observations and abs(action[1]) < 0.2:
-                los = observations[u'LineOfSight']
-                if los["type"] == "Pig":
-                    self.agent_host.sendCommand("attack 1")
-                    self.agent_host.sendCommand("attack 0")
+            # if u'LineOfSight' in observations and abs(action[1]) < 0.2:
+            #     los = observations[u'LineOfSight']
+            #     if los["type"] == "Pig":
+            #         self.agent_host.sendCommand("attack 1")
+            #         self.agent_host.sendCommand("attack 0")
         self.obs, log_pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
@@ -211,8 +210,8 @@ class Lumberjack(gym.Env):
                         obs = np.reshape(pixels, (WIDTH, HEIGHT, 3)).astype(np.uint8)
                         obs = obs / (255 / 2) - 1
                         # scale to between -1, 1
-                        return obs.flatten(), log_pixels
-        return obs.flatten(), 0
+                        return obs, log_pixels
+        return obs, 0
     
     
     def log_returns(self):
@@ -279,96 +278,99 @@ def on_postprocess_traj(info):
 
 if __name__ == '__main__':
     ray.init()
-    ModelCatalog.register_custom_model("my_model", CustomVisionNetwork)
-    # trainer = ppo.PPOTrainer(env=Lumberjack, config={
-    #     'env_config': {},           # No environment parameters to configure
-    #     'framework': 'torch',       # Use pyotrch instead of tensorflow
-    #     'num_gpus': 0,              # We aren't using GPUs
-    #     'num_workers': 2,            # We aren't using parallelism
-    #     # Whether to write episode stats and videos to the agent log dir. This is
-    #     # typically located in ~/ray_results.
-    #     # "monitor": True,
-    #     # Set the ray.rllib.* log level for the agent process and its workers.
-    #     # Should be one of DEBUG, INFO, WARN, or ERROR. The DEBUG level will also
-    #     # periodically print out summaries of relevant internal dataflow (this is
-    #     # also printed out once at startup at the INFO level). When using the
-    #     # `rllib train` command, you can also use the `-v` and `-vv` flags as
-    #     # shorthand for INFO and DEBUG.
-    #     "log_level": "DEBUG",
-
-    #     # For example, given rollout_fragment_length=100 and train_batch_size=1000:
-    #     #   1. RLlib collects 10 fragments of 100 steps each from rollout workers.
-    #     #   2. These fragments are concatenated and we perform an epoch of SGD.
-    #     "rollout_fragment_length": 400,
-    #     # Training batch size, if applicable. Should be >= rollout_fragment_length.
-    #     # Samples batches will be concatenated together to a batch of this size,
-    #     # which is then passed to SGD.
-    #     "train_batch_size": 3200,
-    #     "gamma": 0.99,
-    #     # Whether to clip rewards during Policy's postprocessing.
-    #     # None (default): Clip for Atari only (r=sign(r)).
-    #     # True: r=sign(r): Fixed rewards -1.0, 1.0, or 0.0.
-    #     # False: Never clip.
-    #     # [float value]: Clip at -value and + value.
-    #     # Tuple[value1, value2]: Clip at value1 and value2.
-    #     # "clip_rewards": None,
-    #     # Whether to clip actions to the action space's low/high range spec.
-    #     # "clip_actions": True,
-    #     # # Whether to use "rllib" or "deepmind" preprocessors by default
-    #     # "explore": True,
-    #     # # Provide a dict specifying the Exploration object's config.
-    #     # "exploration_config": {
-    #     #     # The Exploration class to use. In the simplest case, this is the name
-    #     #     # (str) of any class present in the `rllib.utils.exploration` package.
-    #     #     # You can also provide the python class directly or the full location
-    #     #     # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.
-    #     #     # EpsilonGreedy").
-    #     #     "type": "StochasticSampling",
-    #     #     # Add constructor kwargs here (if any).
-    #     # },
-    #     "preprocessor_pref": "deepmind",
-    #     # The default learning rate.
-    #     "lr": 0.0001,
-    #     # "callbacks": {#"on_episode_start": on_episode_start, 
-    #     #                             #"on_episode_step": on_episode_step, 
-    #     #                             #"on_episode_end": on_episode_end, 
-    #     #                             #"on_sample_end": on_sample_end,
-    #     #                             "on_postprocess_traj": on_postprocess_traj,
-    #     #                             #"on_train_result": on_train_result,
-    #     #                             },
-    #     "model": {
-    #         "custom_model": "my_model",
-    #         "dim": 84, 
-    #         "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
-    #         "no_final_linear": True,
-    #     }
-    # })
-
-    trainer = DDPGTrainer(env=Lumberjack, config={
+    ModelCatalog.register_custom_model("my_model", VisionNetwork)
+    trainer = ppo.PPOTrainer(env=Lumberjack, config={
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 3,            # We aren't using parallelism
+        'num_workers': 1,            # We aren't using parallelism
+        # Whether to write episode stats and videos to the agent log dir. This is
+        # typically located in ~/ray_results.
+        # "monitor": True,
+        # Set the ray.rllib.* log level for the agent process and its workers.
+        # Should be one of DEBUG, INFO, WARN, or ERROR. The DEBUG level will also
+        # periodically print out summaries of relevant internal dataflow (this is
+        # also printed out once at startup at the INFO level). When using the
+        # `rllib train` command, you can also use the `-v` and `-vv` flags as
+        # shorthand for INFO and DEBUG.
+        "log_level": "DEBUG",
+
+        # For example, given rollout_fragment_length=100 and train_batch_size=1000:
+        #   1. RLlib collects 10 fragments of 100 steps each from rollout workers.
+        #   2. These fragments are concatenated and we perform an epoch of SGD.
+        "rollout_fragment_length": 64,
+        "sgd_minibatch_size": 64,
+
+        # Training batch size, if applicable. Should be >= rollout_fragment_length.
+        # Samples batches will be concatenated together to a batch of this size,
+        # which is then passed to SGD.
+        "train_batch_size": 128,
+        "gamma": 0.99,
+        # Whether to clip rewards during Policy's postprocessing.
+        # None (default): Clip for Atari only (r=sign(r)).
+        # True: r=sign(r): Fixed rewards -1.0, 1.0, or 0.0.
+        # False: Never clip.
+        # [float value]: Clip at -value and + value.
+        # Tuple[value1, value2]: Clip at value1 and value2.
+        # "clip_rewards": None,
+        # Whether to clip actions to the action space's low/high range spec.
+        # "clip_actions": True,
+        # # Whether to use "rllib" or "deepmind" preprocessors by default
         "explore": True,
-        "rollout_fragment_length": 1,
-        "train_batch_size": 1,
         # Provide a dict specifying the Exploration object's config.
         "exploration_config": {
             # The Exploration class to use. In the simplest case, this is the name
             # (str) of any class present in the `rllib.utils.exploration` package.
             # You can also provide the python class directly or the full location
-            # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.EpsilonGreedy").
+            # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.
+            # EpsilonGreedy").
             "type": "StochasticSampling",
-            # "type": "PerWorkerEpsilonGreedy"
             # Add constructor kwargs here (if any).
         },
-        # "model": {
-        #     "custom_model": "my_model",
-        #     # "dim": 84, 
-        #     "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
-        #     "no_final_linear": True,
-        # }
+        "preprocessor_pref": "deepmind",
+        # The default learning rate.
+        "lr": 0.0001,
+        # "callbacks": {#"on_episode_start": on_episode_start, 
+        #                             #"on_episode_step": on_episode_step, 
+        #                             #"on_episode_end": on_episode_end, 
+        #                             #"on_sample_end": on_sample_end,
+        #                             "on_postprocess_traj": on_postprocess_traj,
+        #                             #"on_train_result": on_train_result,
+        #                             },
+        "model": {
+            "custom_model": "my_model",
+            "dim": 84, 
+            "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
+            "no_final_linear": True,
+        }
     })
+
+    # trainer = DDPGTrainer(env=Lumberjack, config={
+    #     'env_config': {},           # No environment parameters to configure
+    #     'framework': 'torch',       # Use pyotrch instead of tensorflow
+    #     'num_gpus': 0,              # We aren't using GPUs
+    #     'num_workers': 1,            # We aren't using parallelism
+    #     "explore": True,
+    #     "rollout_fragment_length": 1,
+    #     "train_batch_size": 1,
+    #     "log_level": "DEBUG",
+    #     # Provide a dict specifying the Exploration object's config.
+    #     "exploration_config": {
+    #         # The Exploration class to use. In the simplest case, this is the name
+    #         # (str) of any class present in the `rllib.utils.exploration` package.
+    #         # You can also provide the python class directly or the full location
+    #         # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.EpsilonGreedy").
+    #         "type": "StochasticSampling",
+    #         # "type": "PerWorkerEpsilonGreedy"
+    #         # Add constructor kwargs here (if any).
+    #     },
+    #     "model": {
+    #         "custom_model": "my_model",
+    #         # "dim": 84, 
+    #         "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
+    #         "no_final_linear": True,
+    #     }
+    # })
 
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
