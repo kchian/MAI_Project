@@ -91,6 +91,9 @@ def getXML(MAX_EPISODE_STEPS, SIZE = 5, N_TREES = 10):
                             <Reward description="out_of_time" reward="00" />
                         </RewardForMissionEnd>
                         <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
+                        <ObservationFromNearbyEntities>
+                            <Range name="entities" xrange="300" yrange="60" zrange="60"/>
+                        </ObservationFromNearbyEntities>
                     </AgentHandlers>
                 </AgentSection>
             </Mission>'''

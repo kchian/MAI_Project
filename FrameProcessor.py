@@ -56,5 +56,4 @@ class draw_helper(object):
         else:
             canvas.itemconfig(self._image_handle, image=self._panorama_photo)
         root.update()
-        #return log_pixels[(162, 0, 93)] if (162, 0, 93) in log_pixels else 0
         return log_pixels[(1, 57, 110)] if (1, 57, 110) in log_pixels else 0
