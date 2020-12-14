@@ -20,10 +20,13 @@ import numpy as np
 import gym, ray
 from gym.spaces import Box, Discrete
 from ray.rllib.agents import ppo
+from ray.rllib.models import ModelCatalog
+from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 #-----------------------
-
 from LumberjackEnvironment import getXML
-from LumberjackQNet import QNetwork
+from LumberjackQNet import VisionNetwork
+from CustomVision import CustomVisionNetwork
+
 from FrameProcessor import draw_helper
 
 #Hyperparameters
@@ -39,20 +42,22 @@ LEARN_FREQUENCY = 100
 LEARNING_RATE = 1e-4
 EPSILON_DECAY = .999**LEARN_FREQUENCY
 
-SIZE = 50 #Dimensions of map
+SIZE = 3 #Dimensions of map
 PATH = os.path.join(r'Models', r"state_dict_model%d.pt") #Path to save model
 LOAD = False
 MODELNUM = 1000
 
-WIDTH = 800
-HEIGHT = 500
+WIDTH = 84
+HEIGHT = 84
 N_TREES = 10
 COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
+
 
 class Lumberjack(gym.Env):
 
     def __init__(self, env_config):  
         # Static Parameters
+        self.drawer = draw_helper()
         self.size = SIZE
         self.max_episode_steps = MAX_EPISODE_STEPS
         self.log_frequency = 10
@@ -62,19 +67,14 @@ class Lumberjack(gym.Env):
         }
 
         # Rllib Parameters
-        self.action_space = Box(-1, 1, shape=(len(self.action_dict), ))
-        self.observation_space = Box(0, 255, shape=(np.prod([4, 800, 500]), ), dtype=np.uint8)
+        self.num_outputs = 1
+        #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
+        self.action_space = Box(np.array([-1, -1]), np.array([1, 1]),dtype=np.float32)
+        self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
+
 
         # Malmo Parameters
         self.agent_host = MalmoPython.AgentHost()
-        
-        try:
-            self.agent_host.parse( sys.argv )
-        except RuntimeError as e:
-
-            print('ERROR:', e)
-            print(self.agent_host.getUsage())
-            exit(1)
 
         # Lumberjack Parameters
         self.obs = None
@@ -92,12 +92,6 @@ class Lumberjack(gym.Env):
         """
         # Reset Malmo
         world_state = self.init_malmo()
-        world_state = self.agent_host.getWorldState()
-        while not world_state.has_mission_begun:
-            time.sleep(1)
-            world_state = self.agent_host.getWorldState()
-            for error in world_state.errors:
-                print("\nError:", error.text)
 
         # Reset Variables
         self.returns.append(self.episode_return)
@@ -112,9 +106,9 @@ class Lumberjack(gym.Env):
             self.log_returns()
 
         # Get Observation
-        self.obs = self.get_observation(world_state)
+        self.obs, log_pixels  = self.get_observation(world_state)
 
-        return self.obs.flatten()
+        return self.obs
 
     def step(self, action):
         """
@@ -129,76 +123,100 @@ class Lumberjack(gym.Env):
             done: <bool> indicates terminal state
             info: <dict> dictionary of extra information
         """
-
         # Get Action
-        for i, j in self.action_dict.items():
-            self.agent_host.sendCommand(f"{j} {action[i]:30.1f}")
-        time.sleep(.2)
+        reward = 0
+        print(action)
+        self.agent_host.sendCommand(f"move {(action[0]/4):30.1f}")
+        self.agent_host.sendCommand(f"turn {(action[1]/4):30.1f}")
+
+        # negative reward for spinning
+        reward -= 1# abs(action[0]) * 1
+        # Try upping this
+        time.sleep(1)
         self.episode_step += 1
 
         # Get Done
         world_state = self.agent_host.getWorldState()
 
         done = False
-        if self.episode_step >= self.max_episode_steps or not world_state.is_mission_running:
+        if not world_state.is_mission_running:
             done = True
+            time.sleep(4)
 
         # Get Observation
-        world_state = self.agent_host.getWorldState()
+
         for error in world_state.errors:
             print("Error:", error.text)
-        self.obs = self.get_observation(world_state) 
-
-        # Get Reward
-        reward = 0
+        for o in world_state.observations:
+            # https://github.com/microsoft/malmo/blob/master/Malmo/samples/Python_examples/hit_test.py
+            msg = o.text
+            observations = json.loads(msg)
+            # if u'LineOfSight' in observations and abs(action[1]) < 0.2:
+            #     los = observations[u'LineOfSight']
+            #     if los["type"] == "Pig":
+            #         self.agent_host.sendCommand("attack 1")
+            #         self.agent_host.sendCommand("attack 0")
+        self.obs, log_pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
+        reward += log_pixels/20
         self.episode_return += reward
+        # Get Reward
 
-        return self.obs.flatten(), reward, done, dict()
+
+        return self.obs, reward, done, dict()
 
     def init_malmo(self):
         #Record Mission 
-        my_mission = MalmoPython.MissionSpec(getXML(MAX_EPISODE_STEPS, SIZE), True)
+        my_mission = MalmoPython.MissionSpec(getXML(self.max_episode_steps, self.size), True)
         my_mission_record = MalmoPython.MissionRecordSpec()
         # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
-        my_mission.requestVideoWithDepth(800, 500)
+        # my_mission.requestVideo(WIDTH, HEIGHT)
         my_mission.setViewpoint(0)
 
+        max_retries = 5
+        my_clients = MalmoPython.ClientPool()
+        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
+        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
+        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
         # Attempt to start a mission:
-        max_retries = 1
         for retry in range(max_retries):
             try:
-                self.agent_host.startMission( my_mission, my_mission_record )
+                self.agent_host.startMission( my_mission, my_clients, my_mission_record, 0, 'wtf')
+                break
             except RuntimeError as e:
                 if retry == max_retries - 1:
-                    print("Error starting mission:",e)
+                    print("Error starting mission:", e)
                     exit(1)
                 else:
                     time.sleep(2)
-                    continue
-        return self.agent_host
-
-    def get_observation(self, world_state):
-        obs = np.zeros((4, 800, 500))
-
-        while world_state.is_mission_running:
+        world_state = self.agent_host.getWorldState()
+        while not world_state.has_mission_begun:
             time.sleep(0.1)
             world_state = self.agent_host.getWorldState()
+            for error in world_state.errors:
+                print("\nError:", error.text)
+
+        return world_state
+
+    def get_observation(self, world_state):
+        obs = np.zeros((WIDTH, HEIGHT, 3))
+        if world_state.is_mission_running:
             if len(world_state.errors) > 0:
                 raise AssertionError('Could not load grid.')
-
             if len(world_state.video_frames):
                 for frame in reversed(world_state.video_frames):
-                    if frame.channels == 4:
-                        break
-                if frame.channels == 4:
-                    pixels = world_state.video_frames[0].pixels
-                    obs = np.reshape(pixels, (4, 800, 500))
-                    break
-        return obs
-
+                    if frame.channels == 3:
+                        log_pixels = self.drawer.showFrame(frame)
+                        pixels = frame.pixels
+                        obs = np.reshape(pixels, (WIDTH, HEIGHT, 3)).astype(np.uint8)
+                        obs = obs / (255 / 2) - 1
+                        # scale to between -1, 1
+                        return obs, log_pixels
+        return obs, 0
+    
+    
     def log_returns(self):
         """
         Log the current returns as a graph and text file
@@ -214,35 +232,83 @@ class Lumberjack(gym.Env):
         plt.title('Reach the tree')
         plt.ylabel('Return')
         plt.xlabel('Steps')
-        plt.savefig('returns.png')
+        s = time.time()
+        plt.savefig(f'returns{s}.png')
 
-        with open('returns.txt', 'w') as f:
+        with open(f'returns{s}.txt', 'w') as f:
             for value in self.returns:
                 f.write("{}\n".format(value)) 
+# The callback function
+def on_postprocess_traj(info):
+    """
+    arg: {"agent_id": ..., "episode": ...,
+        "pre_batch": (before processing),
+        "post_batch": (after processing),
+        "all_pre_batches": (other agent ids),
+    }
+
+    # https://github.com/ray-project/ray/blob/ee8c9ff7320ec6a2d7d097cd5532005c6aeb216e/rllib/policy/sample_batch.py
+    Dictionaries in a sample_obj, k:
+        t
+        eps_id
+        agent_index
+        obs
+        actions
+        rewards
+        prev_actions
+        prev_rewards
+        dones
+        infos
+        new_obs
+        action_prob
+        action_logp
+        vf_preds
+        behaviour_logits
+        unroll_id       
+    """
+    agt_id = info["agent_id"]
+    eps_id = info["episode"].episode_id
+    policy_obj = info["pre_batch"][0]
+    sample_obj = info["pre_batch"][1]    
+    print('agent_id = {}'.format(agt_id))
+    print('episode = {}'.format(eps_id))
+
+    #print("on_postprocess_traj info = {}".format(info))
+    #print("on_postprocess_traj sample_obj = {}".format(sample_obj))
+    print('actions = {}'.format(sample_obj.columns(["actions"])))
+    return
+
 
 if __name__ == '__main__':
     ray.init()
+    ModelCatalog.register_custom_model("my_model", VisionNetwork)
+    
     trainer = ppo.PPOTrainer(env=Lumberjack, config={
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 0,            # We aren't using parallelism
-
+        'num_workers': 1,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
-        "monitor": True,
+        # "monitor": True,
         # Set the ray.rllib.* log level for the agent process and its workers.
         # Should be one of DEBUG, INFO, WARN, or ERROR. The DEBUG level will also
         # periodically print out summaries of relevant internal dataflow (this is
         # also printed out once at startup at the INFO level). When using the
         # `rllib train` command, you can also use the `-v` and `-vv` flags as
         # shorthand for INFO and DEBUG.
-        "log_level": "WARN",
+        "log_level": "DEBUG",
+
+        # For example, given rollout_fragment_length=100 and train_batch_size=1000:
+        #   1. RLlib collects 10 fragments of 100 steps each from rollout workers.
+        #   2. These fragments are concatenated and we perform an epoch of SGD.
+        "rollout_fragment_length": 64,
+        "sgd_minibatch_size": 64,
 
         # Training batch size, if applicable. Should be >= rollout_fragment_length.
         # Samples batches will be concatenated together to a batch of this size,
         # which is then passed to SGD.
-        "train_batch_size": 200,
+        "train_batch_size": 128,
         "gamma": 0.99,
         # Whether to clip rewards during Policy's postprocessing.
         # None (default): Clip for Atari only (r=sign(r)).
@@ -250,14 +316,73 @@ if __name__ == '__main__':
         # False: Never clip.
         # [float value]: Clip at -value and + value.
         # Tuple[value1, value2]: Clip at value1 and value2.
-        "clip_rewards": None,
+        # "clip_rewards": None,
         # Whether to clip actions to the action space's low/high range spec.
-        "clip_actions": True,
-        # Whether to use "rllib" or "deepmind" preprocessors by default
-        "preprocessor_pref": "rllib",
+        # "clip_actions": True,
+        # # Whether to use "rllib" or "deepmind" preprocessors by default
+        "explore": True,
+        # Provide a dict specifying the Exploration object's config.
+        "exploration_config": {
+            # The Exploration class to use. In the simplest case, this is the name
+            # (str) of any class present in the `rllib.utils.exploration` package.
+            # You can also provide the python class directly or the full location
+            # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.
+            # EpsilonGreedy").
+            "type": "StochasticSampling",
+            # Add constructor kwargs here (if any).
+        },
+        "preprocessor_pref": "deepmind",
         # The default learning rate.
         "lr": 0.0001,
+        # "callbacks": {#"on_episode_start": on_episode_start, 
+        #                             #"on_episode_step": on_episode_step, 
+        #                             #"on_episode_end": on_episode_end, 
+        #                             #"on_sample_end": on_sample_end,
+        #                             "on_postprocess_traj": on_postprocess_traj,
+        #                             #"on_train_result": on_train_result,
+        #                             },
+        "model": {
+            "custom_model": "my_model",
+            "dim": 84, 
+            "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
+            "no_final_linear": True,
+        }
     })
 
-    while True:
-        print(trainer.train())
+    # trainer = DDPGTrainer(env=Lumberjack, config={
+    #     'env_config': {},           # No environment parameters to configure
+    #     'framework': 'torch',       # Use pyotrch instead of tensorflow
+    #     'num_gpus': 0,              # We aren't using GPUs
+    #     'num_workers': 1,            # We aren't using parallelism
+    #     "explore": True,
+    #     "rollout_fragment_length": 1,
+    #     "train_batch_size": 1,
+    #     "log_level": "DEBUG",
+    #     # Provide a dict specifying the Exploration object's config.
+    #     "exploration_config": {
+    #         # The Exploration class to use. In the simplest case, this is the name
+    #         # (str) of any class present in the `rllib.utils.exploration` package.
+    #         # You can also provide the python class directly or the full location
+    #         # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.EpsilonGreedy").
+    #         "type": "StochasticSampling",
+    #         # "type": "PerWorkerEpsilonGreedy"
+    #         # Add constructor kwargs here (if any).
+    #     },
+    #     "model": {
+    #         "custom_model": "my_model",
+    #         # "dim": 84, 
+    #         "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
+    #         "no_final_linear": True,
+    #     }
+    # })
+    # os.chdir(r'')
+    # print(os.listdir())
+    trainer.restore(r"C:\Users\Kevin\ray_results\turn\rip")
+    for i in range(1000):
+        # Perform one iteration of training the policy with PPO
+        result = trainer.train()
+
+        if i % 10 == 0:
+            checkpoint = trainer.save()
+            print("checkpoint saved at", checkpoint)
+    trainer.save()

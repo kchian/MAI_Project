@@ -7,10 +7,11 @@ def drawTree(coord):
     x, z = coord
     tree = ""
     height = 5
-    tree+=CUBOID(x-1, x+1, height+1, height+1, z-1, z+1, "leaves")
-    tree+=CUBOID(x-2, x+2, height-1, height, z-2, z+2, "leaves")
+    # tree+=CUBOID(x-1, x+1, height+1, height+1, z-1, z+1, "leaves")
+    # tree+=CUBOID(x-2, x+2, height-1, height, z-2, z+2, "leaves")
     for y in range(height):
-        tree+=BLOCK(x, y+2, z, "log")
+        #tree+=BLOCK(x, y+2, z, "log")
+        tree+=CUBOID(x-1, x+1, 2, 5, z-1, z+1, "log")
     return tree
 
 def createMarker(index, coord):
@@ -22,10 +23,11 @@ def getTree(blocklist, SIZE):
         treePos  = [randint(-SIZE, SIZE) for i in range(2)]
     return treePos
 
-def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50, N_TREES = 10):
-    
+def getXML(MAX_EPISODE_STEPS, SIZE = 5, N_TREES = 10):
     startX, startZ = [randint(-SIZE, SIZE) for i in range(2)]
-    blocklist = [[startX, startZ]]
+    startX, startZ = (1, 0)
+    
+    blocklist = [[i, j] for i in range(startX - 1, startX + 2) for j in range(startZ - 1, startZ + 2) ]
     trees = []
     for i in range(N_TREES):
         treePos = getTree(blocklist, SIZE)
@@ -33,6 +35,9 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50, N_TREES = 10):
         trees.append(treePos)
     startX+=0.5
     startZ+=0.5
+    
+    SIZEX = 2
+    SIZEZ = 9
     return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 <About>
@@ -42,7 +47,7 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50, N_TREES = 10):
                     <ServerInitialConditions>
                         <Time>
                             <StartTime>8000</StartTime>
-                            <AllowPassageOfTime>true</AllowPassageOfTime>
+                            <AllowPassageOfTime>false</AllowPassageOfTime>
                         </Time>
                         <Weather>clear</Weather>
                     </ServerInitialConditions>
@@ -50,10 +55,11 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50, N_TREES = 10):
                         <FlatWorldGenerator generatorString="3;7,2;1;"/>
                         <DrawingDecorator>''' + \
                             "<DrawCuboid x1='{}' x2='{}' y1='0' y2='10' z1='{}' z2='{}' type='air'/>".format(-SIZE-100, SIZE+100, -SIZE-100, SIZE+100) + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='-1' z1='{}' z2='{}' type='grass'/>".format(-SIZE*2, SIZE*2, -SIZE*2, SIZE*2) + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            "".join(drawTree(coord) for coord in trees) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZEX, SIZEX, 0, SIZEZ) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZEX - 1, SIZEX + 1, -1, SIZEZ + 1) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZEX, SIZEX, 0, SIZEZ) + \
                             '''
+                            <DrawEntity x="0.5" y="2" z="9.5" type="Pig"/>
                         </DrawingDecorator>
                         <ServerQuitWhenAnyAgentFinishes/>
                     </ServerHandlers>
@@ -61,42 +67,35 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 50, N_TREES = 10):
                 <AgentSection mode="Survival">
                     <Name>MAI Lumberjack</Name>
                     <AgentStart>''' + \
-                        '<Placement x="{}" y="2" z="{}" pitch="0" yaw="0"/>'.format(startX, startZ) + \
+                        '<Placement x="{}" y="2" z="{}" pitch="30" yaw="0"/>'.format(startX, startZ) + \
                         '''
-                        <Inventory>
-                            <InventoryItem slot="0" type="diamond_axe"/>
-                        </Inventory>
                     </AgentStart>
                     <AgentHandlers>
                         <ContinuousMovementCommands>
                             <ModifierList type="allow-list">
                                 <command>move</command>
                                 <command>turn</command>
+                                <command>attack</command>
                             </ModifierList>
                         </ContinuousMovementCommands>
+                        <ObservationFromRay/>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>
-                            <Width>800</Width>
-                            <Height>500</Height>
+                            <Width>84</Width>
+                            <Height>84</Height>
                         </ColourMapProducer>
-                        <RewardForTouchingBlockType>
-                            <Block type="log" reward="10000"/>
-                        </RewardForTouchingBlockType>
-                        <AgentQuitFromReachingCommandQuota total="'''+str(MAX_EPISODE_STEPS)+'''" />
-                        <RewardForMissionEnd>
-                            <Reward description="found tree" reward="0"/>
+                        <RewardForDamagingEntity>
+                            <Mob type="Pig" reward="1000"/>
+                        </RewardForDamagingEntity>
+                        <RewardForMissionEnd rewardForDeath="-1">
+                            <Reward description="out_of_time" reward="00" />
                         </RewardForMissionEnd>
+                        <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
                         <ObservationFromNearbyEntities>
                             <Range name="entities" xrange="300" yrange="60" zrange="60"/>
                         </ObservationFromNearbyEntities>
-                        <ObservationFromDistance>''' + \
-                            ''.join(createMarker(index, coord) for index, coord in enumerate(trees)) + \
-                            '''
-                        </ObservationFromDistance>
-                        <AgentQuitFromTouchingBlockType>
-                            <Block type="log"/>
-                        </AgentQuitFromTouchingBlockType>
                     </AgentHandlers>
                 </AgentSection>
             </Mission>'''
     
+#                             <Block type="log" reward="10.0" behaviour="oncePerTimeSpan" cooldownInMs="0.1"/>
