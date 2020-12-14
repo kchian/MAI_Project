@@ -69,7 +69,7 @@ class Lumberjack(gym.Env):
         # Rllib Parameters
         self.num_outputs = 1
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
-        self.action_space = Box(np.array([-1]), np.array([1]),dtype=np.float32)
+        self.action_space = Box(np.array([-1, -1]), np.array([1, 1]),dtype=np.float32)
         self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
 
 
@@ -127,6 +127,8 @@ class Lumberjack(gym.Env):
         reward = 0
         print(action)
         self.agent_host.sendCommand(f"move {(action[0]/4):30.1f}")
+        self.agent_host.sendCommand(f"turn {(action[1]/4):30.1f}")
+
         # negative reward for spinning
         reward -= 1# abs(action[0]) * 1
         time.sleep(.2)
@@ -279,6 +281,7 @@ def on_postprocess_traj(info):
 if __name__ == '__main__':
     ray.init()
     ModelCatalog.register_custom_model("my_model", VisionNetwork)
+    
     trainer = ppo.PPOTrainer(env=Lumberjack, config={
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
@@ -371,7 +374,9 @@ if __name__ == '__main__':
     #         "no_final_linear": True,
     #     }
     # })
-
+    # os.chdir(r'')
+    # print(os.listdir())
+    trainer.restore(r"C:\Users\Kevin\ray_results\dude\rip")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()
