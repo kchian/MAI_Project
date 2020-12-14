@@ -70,7 +70,8 @@ class Lumberjack(gym.Env):
         self.num_outputs = 2
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
         self.action_space = Box(np.array([-1,-1]), np.array([1,1]),dtype=np.float32)
-        self.observation_space = Box(-1.00, 1, shape=(WIDTH, HEIGHT, 3), dtype=np.float32)
+        self.observation_space = Box(-1.00, 1, shape=(3 * WIDTH * HEIGHT,), dtype=np.float32)
+
 
         # Malmo Parameters
         self.agent_host = MalmoPython.AgentHost()
@@ -124,10 +125,10 @@ class Lumberjack(gym.Env):
         """
         # Get Action
         reward = 0
-        self.agent_host.sendCommand(f"move {(action[0]):30.1f}")
-        self.agent_host.sendCommand(f"turn {(action[1]):30.1f}")
+        self.agent_host.sendCommand(f"move {(action[0]/4):30.1f}")
+        self.agent_host.sendCommand(f"turn {(action[1]/4):30.1f}")
         # negative reward for spinning
-        reward -= abs(action[1]) * 10000
+        reward -= abs(action[1]) * 10
         reward += abs(action[0]) * 10
         time.sleep(.2)
         self.episode_step += 1
@@ -210,8 +211,8 @@ class Lumberjack(gym.Env):
                         obs = np.reshape(pixels, (WIDTH, HEIGHT, 3)).astype(np.uint8)
                         obs = obs / (255 / 2) - 1
                         # scale to between -1, 1
-                        return obs, log_pixels
-        return obs, 0
+                        return obs.flatten(), log_pixels
+        return obs.flatten(), 0
     
     
     def log_returns(self):
@@ -349,8 +350,8 @@ if __name__ == '__main__':
         'num_gpus': 0,              # We aren't using GPUs
         'num_workers': 3,            # We aren't using parallelism
         "explore": True,
-        "rollout_fragment_length": 128,
-        "train_batch_size": 256,
+        "rollout_fragment_length": 1,
+        "train_batch_size": 1,
         # Provide a dict specifying the Exploration object's config.
         "exploration_config": {
             # The Exploration class to use. In the simplest case, this is the name
@@ -361,12 +362,12 @@ if __name__ == '__main__':
             # "type": "PerWorkerEpsilonGreedy"
             # Add constructor kwargs here (if any).
         },
-        "model": {
-            "custom_model": "my_model",
-            # "dim": 84, 
-            "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
-            "no_final_linear": True,
-        }
+        # "model": {
+        #     "custom_model": "my_model",
+        #     # "dim": 84, 
+        #     "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
+        #     "no_final_linear": True,
+        # }
     })
 
     for i in range(1000):
