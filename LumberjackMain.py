@@ -26,6 +26,7 @@ from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 from LumberjackEnvironment import getXML
 from LumberjackQNet import VisionNetwork
 from CustomVision import CustomVisionNetwork
+from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
@@ -164,16 +165,14 @@ class Lumberjack(gym.Env):
                 los = observations[u'LineOfSight']
                 if los["type"] == "Pig":
                     reward += 300
-                    # self.agent_host.sendCommand("attack 1")
-                    # self.agent_host.sendCommand("attack 0")
+                    self.agent_host.sendCommand("attack 1")
+                    self.agent_host.sendCommand("attack 0")
         self.obs, log_pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += log_pixels/30
+        reward += log_pixels/40
         self.episode_return += reward
         # Get Reward
-
-
         return self.obs, reward, done, dict()
 
     def init_malmo(self):
@@ -354,7 +353,13 @@ if __name__ == '__main__':
         "model": {
             "custom_model": "my_model",
             "dim": 84, 
-            "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
+            # Used to be 42, 42 to get it to the right shape
+            "conv_filters": [[16, [4, 4], 2], 
+                             [32, [16, 16], 2], 
+                             [64, [5, 5], 2], 
+                             [128, [16, 16], 1], 
+                             [128, [16, 16], 1],
+                             [128, [11, 11], 1]],
             "no_final_linear": True,
         }
     })
