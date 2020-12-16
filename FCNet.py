@@ -1,4 +1,5 @@
-# Source: https://github.com/ray-project/ray/blob/master/rllib/models/torch/visionnet.py
+# Source: https://github.com/ray-project/ray/blob/master/rllib/examples/custom_env.py
+# super simple model. also worth testing later: https://github.com/ray-project/ray/blob/master/rllib/models/torch/fcnet.py
 
 import numpy as np
 from typing import Dict, List
@@ -11,8 +12,9 @@ from ray.rllib.models.utils import get_filter_config
 from ray.rllib.utils.annotations import override
 from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.utils.typing import ModelConfigDict, TensorType
+from ray.rllib.models.torch.fcnet import FullyConnectedNetwork as TorchFC
 
-_, nn = try_import_torch()
+torch, nn = try_import_torch()
 class FCNet(TorchModelV2, nn.Module):
     """Example of a PyTorch custom model that just delegates to a fc-net."""
 
