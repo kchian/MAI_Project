@@ -48,8 +48,8 @@ PATH = os.path.join(r'Models', r"state_dict_model%d.pt") #Path to save model
 LOAD = False
 MODELNUM = 1000
 
-WIDTH = 84
-HEIGHT = 84
+WIDTH = 20
+HEIGHT = 20
 N_TREES = 10
 COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
 
@@ -71,7 +71,8 @@ class Lumberjack(gym.Env):
         self.num_outputs = 2
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
         self.action_space = Box(np.array([-1, -0.25]), np.array([1, 0.25]),dtype=np.float32)
-        self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
+        # self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
+        self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*3,), dtype=np.float32)
 
 
         # Malmo Parameters
@@ -187,7 +188,7 @@ class Lumberjack(gym.Env):
         max_retries = 5
         my_clients = MalmoPython.ClientPool()
         my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
-        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
+        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
         # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
         # Attempt to start a mission:
         for retry in range(max_retries):
@@ -222,8 +223,8 @@ class Lumberjack(gym.Env):
                         obs = np.reshape(pixels, (WIDTH, HEIGHT, 3)).astype(np.uint8)
                         obs = obs / (255 / 2) - 1
                         # scale to between -1, 1
-                        return obs, log_pixels
-        return obs, 0
+                        return obs.flatten(), log_pixels
+        return obs.flatten(), 0
     
     
     def log_returns(self):
@@ -290,13 +291,13 @@ def on_postprocess_traj(info):
 
 if __name__ == '__main__':
     ray.init()
-    ModelCatalog.register_custom_model("my_model", VisionNetwork)
+    ModelCatalog.register_custom_model("my_model", FCNet)
     
     trainer = ppo.PPOTrainer(env=Lumberjack, config={
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 1,            # We aren't using parallelism
+        'num_workers': 2,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
         # "monitor": True,
@@ -352,15 +353,15 @@ if __name__ == '__main__':
         #                             },
         "model": {
             "custom_model": "my_model",
-            "dim": 84, 
-            # Used to be 42, 42 to get it to the right shape
-            "conv_filters": [[16, [4, 4], 2], 
-                             [32, [16, 16], 2], 
-                             [64, [5, 5], 2], 
-                             [128, [16, 16], 1], 
-                             [128, [16, 16], 1],
-                             [128, [11, 11], 1]],
-            "no_final_linear": True,
+            # "dim": 84, 
+            # # Used to be 42, 42 to get it to the right shape
+            # "conv_filters": [[16, [4, 4], 2], 
+            #                  [32, [16, 16], 2], 
+            #                  [64, [5, 5], 2], 
+            #                  [128, [16, 16], 1], 
+            #                  [128, [16, 16], 1],
+            #                  [128, [11, 11], 1]],
+            # "no_final_linear": True,
         }
     })
 
