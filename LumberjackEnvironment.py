@@ -81,8 +81,8 @@ def getXML(MAX_EPISODE_STEPS, SIZE = 5, N_TREES = 10):
                         <ObservationFromRay/>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>
-                            <Width>84</Width>
-                            <Height>84</Height>
+                            <Width>20</Width>
+                            <Height>20</Height>
                         </ColourMapProducer>
                         <RewardForDamagingEntity>
                             <Mob type="Pig" reward="1000"/>

@@ -26,6 +26,7 @@ from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 from LumberjackEnvironment import getXML
 from LumberjackQNet import VisionNetwork
 from CustomVision import CustomVisionNetwork
+from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
@@ -47,8 +48,8 @@ PATH = os.path.join(r'Models', r"state_dict_model%d.pt") #Path to save model
 LOAD = False
 MODELNUM = 1000
 
-WIDTH = 84
-HEIGHT = 84
+WIDTH = 20
+HEIGHT = 20
 N_TREES = 10
 COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
 
@@ -70,7 +71,7 @@ class Lumberjack(gym.Env):
         self.num_outputs = 1
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
         self.action_space = Box(np.array([-1]), np.array([1]),dtype=np.float32)
-        self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
+        self.observation_space = Box(-1.00, 1, shape=(WIDTH * HEIGHT * 3,), dtype=np.float32)
 
 
         # Malmo Parameters
@@ -156,7 +157,8 @@ class Lumberjack(gym.Env):
         self.obs, log_pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += log_pixels/20
+        reward += log_pixels * 20#/20
+        print(log_pixels * 20)
         self.episode_return += reward
         # Get Reward
         return self.obs, reward, done, dict()
@@ -210,8 +212,8 @@ class Lumberjack(gym.Env):
                         obs = obs / (255 / 2) - 1
                         # scale to between -1, 1
                         # print(obs)
-                        return obs, log_pixels
-        return obs, 0
+                        return obs.flatten(), log_pixels
+        return obs.flatten(), 0
     
     
     def log_returns(self):
@@ -226,7 +228,7 @@ class Lumberjack(gym.Env):
         returns_smooth = np.convolve(self.returns, box, mode='same')
         plt.clf()
         plt.plot(self.steps, returns_smooth)
-        plt.title('Reach the tree')
+        plt.title('No turning')
         plt.ylabel('Return')
         plt.xlabel('Steps')
         s = time.time()
@@ -278,7 +280,7 @@ def on_postprocess_traj(info):
 
 if __name__ == '__main__':
     ray.init(address='auto')
-    ModelCatalog.register_custom_model("my_model", CustomVisionNetwork)
+    ModelCatalog.register_custom_model("my_model", FCNet)
     
     trainer = ppo.PPOTrainer(env=Lumberjack, config={
         'env_config': {},           # No environment parameters to configure
@@ -295,7 +297,7 @@ if __name__ == '__main__':
         # `rllib train` command, you can also use the `-v` and `-vv` flags as
         # shorthand for INFO and DEBUG.
         "log_level": "DEBUG",
-        "vf_clip_param": 500,
+        "vf_clip_param": 100,
         # For example, given rollout_fragment_length=100 and train_batch_size=1000:
         #   1. RLlib collects 10 fragments of 100 steps each from rollout workers.
         #   2. These fragments are concatenated and we perform an epoch of SGD.
@@ -339,10 +341,7 @@ if __name__ == '__main__':
         #                             #"on_train_result": on_train_result,
         #                             },
         "model": {
-            "custom_model": "my_model",
-            "dim": 84, 
-            "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
-            "no_final_linear": True,
+            "custom_model": "my_model"
         }
     })
 

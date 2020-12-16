@@ -8,8 +8,8 @@ from tkinter import *
 
 from PIL import Image
 from PIL import ImageTk
-video_width = 84
-video_height = 84
+video_width = 20
+video_height = 20
 WIDTH = 500
 HEIGHT = 500# + video_width
 
@@ -42,9 +42,9 @@ class draw_helper(object):
 
     def showFrame(self, frame):
         cmap = Image.frombytes('RGB', (video_width, video_height), bytes(frame.pixels)).resize((WIDTH, HEIGHT), Image.ANTIALIAS)
-        c = cmap.getcolors(video_width * video_height)
+        c = Image.frombytes('RGB', (video_width, video_height), bytes(frame.pixels)).getcolors(video_width * video_height)
         if c:
-            log_pixels = {color: count for count, color in cmap.getcolors(video_width * video_height)}
+            log_pixels = {color: count for count, color in c}
         else:
             log_pixels = {}
         cmap.load()
