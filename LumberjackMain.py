@@ -171,7 +171,7 @@ class Lumberjack(gym.Env):
         self.obs, log_pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += log_pixels/40
+        reward += log_pixels * 20
         self.episode_return += reward
         # Get Reward
         return self.obs, reward, done, dict()
@@ -393,7 +393,7 @@ if __name__ == '__main__':
     # })
     # os.chdir(r'')
     # print(os.listdir())
-    # trainer.restore(r"C:\Users\Kevin\ray_results\turn\rip")
+    trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_151\check")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()
