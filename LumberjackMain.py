@@ -30,28 +30,8 @@ from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
-#Hyperparameters
-MAX_EPISODE_STEPS = 400
-MAX_GLOBAL_STEPS = 100000
-REPLAY_BUFFER_SIZE = 10000
-MIN_EPSILON = .1
-BATCH_SIZE = 70
-GAMMA = .9
-TARGET_UPDATE = 100
-START_TRAINING = 500
-LEARN_FREQUENCY = 100
-LEARNING_RATE = 1e-4
-EPSILON_DECAY = .999**LEARN_FREQUENCY
-
-SIZE = 3 #Dimensions of map
-PATH = os.path.join(r'Models', r"state_dict_model%d.pt") #Path to save model
-LOAD = False
-MODELNUM = 1000
-
-WIDTH = 20
-HEIGHT = 20
-N_TREES = 10
-COLOURS = {'wood': (0, 93, 162), 'leaves':(232, 70, 162), 'grass':(46, 70, 139)}
+LOAD = True
+WIDTH, HEIGHT = (20, 20)
 
 
 class Lumberjack(gym.Env):
@@ -59,8 +39,6 @@ class Lumberjack(gym.Env):
     def __init__(self, env_config):  
         # Static Parameters
         self.drawer = draw_helper()
-        self.size = SIZE
-        self.max_episode_steps = MAX_EPISODE_STEPS
         self.log_frequency = 10
         self.action_dict = {
             0: 'move',  # Move forward
@@ -178,7 +156,7 @@ class Lumberjack(gym.Env):
 
     def init_malmo(self):
         #Record Mission 
-        my_mission = MalmoPython.MissionSpec(getXML(self.max_episode_steps, self.size), True)
+        my_mission = MalmoPython.MissionSpec(getXML(), True)
         my_mission_record = MalmoPython.MissionRecordSpec()
         # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
@@ -393,7 +371,8 @@ if __name__ == '__main__':
     # })
     # os.chdir(r'')
     # print(os.listdir())
-    trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_151\check")
+    if LOAD:
+        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_151\check")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()
