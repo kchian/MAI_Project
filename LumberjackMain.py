@@ -67,9 +67,9 @@ class Lumberjack(gym.Env):
         }
 
         # Rllib Parameters
-        self.num_outputs = 1
+        self.num_outputs = 2
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
-        self.action_space = Box(np.array([-1, -1]), np.array([1, 1]),dtype=np.float32)
+        self.action_space = Box(np.array([-1, -0.25]), np.array([1, 0.25]),dtype=np.float32)
         self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
 
 
@@ -126,13 +126,14 @@ class Lumberjack(gym.Env):
         # Get Action
         reward = 0
         print(action)
-        self.agent_host.sendCommand(f"move {(action[0]/4):30.1f}")
-        self.agent_host.sendCommand(f"turn {(action[1]/4):30.1f}")
+        self.agent_host.sendCommand(f"move {(action[0]):30.1f}")
+        self.agent_host.sendCommand(f"turn {(action[1]):30.1f}")
 
         # negative reward for spinning
-        reward -= 1# abs(action[0]) * 1
+        reward -= abs(action[0]) * 10
+        reward -= abs(action[1]) * 10
         # Try upping this
-        time.sleep(1)
+        time.sleep(0.5)
         self.episode_step += 1
 
         # Get Done
@@ -151,15 +152,24 @@ class Lumberjack(gym.Env):
             # https://github.com/microsoft/malmo/blob/master/Malmo/samples/Python_examples/hit_test.py
             msg = o.text
             observations = json.loads(msg)
-            # if u'LineOfSight' in observations and abs(action[1]) < 0.2:
-            #     los = observations[u'LineOfSight']
-            #     if los["type"] == "Pig":
-            #         self.agent_host.sendCommand("attack 1")
-            #         self.agent_host.sendCommand("attack 0")
+            # if 'entities' in observations:
+            #     agent_pos = [observations['XPos'], observations['YPos'], observations['ZPos']]
+            #     for entity in observations['entities']:
+            #         if entity['name'] == 'Pig':
+            #             pig_pos = [entity['x'], entity['y'], entity['z']]
+            #             # distance
+            #             print(sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5)
+            #             reward += (10 - sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5) * 10
+            if u'LineOfSight' in observations and abs(action[1]) < 0.2:
+                los = observations[u'LineOfSight']
+                if los["type"] == "Pig":
+                    reward += 300
+                    # self.agent_host.sendCommand("attack 1")
+                    # self.agent_host.sendCommand("attack 0")
         self.obs, log_pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += log_pixels/20
+        reward += log_pixels/30
         self.episode_return += reward
         # Get Reward
 
@@ -177,9 +187,9 @@ class Lumberjack(gym.Env):
 
         max_retries = 5
         my_clients = MalmoPython.ClientPool()
-        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
         my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
-        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
+        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
+        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
         # Attempt to start a mission:
         for retry in range(max_retries):
             try:
@@ -298,7 +308,7 @@ if __name__ == '__main__':
         # `rllib train` command, you can also use the `-v` and `-vv` flags as
         # shorthand for INFO and DEBUG.
         "log_level": "DEBUG",
-
+        # "vf_clip_param": 50,
         # For example, given rollout_fragment_length=100 and train_batch_size=1000:
         #   1. RLlib collects 10 fragments of 100 steps each from rollout workers.
         #   2. These fragments are concatenated and we perform an epoch of SGD.
@@ -377,7 +387,7 @@ if __name__ == '__main__':
     # })
     # os.chdir(r'')
     # print(os.listdir())
-    trainer.restore(r"C:\Users\Kevin\ray_results\turn\rip")
+    # trainer.restore(r"C:\Users\Kevin\ray_results\turn\rip")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()

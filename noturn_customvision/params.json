@@ -1,0 +1,57 @@
+{
+  "env_config": {},
+  "exploration_config": {
+    "type": "StochasticSampling"
+  },
+  "explore": true,
+  "framework": "torch",
+  "gamma": 0.99,
+  "log_level": "DEBUG",
+  "lr": 1e-05,
+  "model": {
+    "conv_filters": [
+      [
+        16,
+        [
+          4,
+          4
+        ],
+        2
+      ],
+      [
+        32,
+        [
+          4,
+          4
+        ],
+        1
+      ],
+      [
+        64,
+        [
+          5,
+          5
+        ],
+        1
+      ],
+      [
+        32,
+        [
+          42,
+          42
+        ],
+        1
+      ]
+    ],
+    "custom_model": "my_model",
+    "dim": 84,
+    "no_final_linear": true
+  },
+  "num_gpus": 0,
+  "num_workers": 1,
+  "preprocessor_pref": "deepmind",
+  "rollout_fragment_length": 128,
+  "sgd_minibatch_size": 128,
+  "train_batch_size": 256,
+  "vf_clip_param": 500
+}
