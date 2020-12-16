@@ -32,6 +32,7 @@ class CustomVisionNetwork(TorchModelV2, nn.Module):
                               model_config, name)
         nn.Module.__init__(self)
         # override the layer building earlier
+        self.rnn_hidden_dim = model_config["lstm_cell_size"] if "lstm_cell_size" in model_config else 256
         self._convs = nn.Sequential(
             nn.Conv2d(3, 3, kernel_size=10, stride=1, padding=2),
             nn.ReLU(),
@@ -44,6 +45,7 @@ class CustomVisionNetwork(TorchModelV2, nn.Module):
             # PrintLayer(),
             nn.Linear(12, 2)
         )
+        self.value_branch = nn.Linear(2, 1)
         # Holds the current "base" output (before logits layer).
         self._features = None
 
@@ -57,21 +59,26 @@ class CustomVisionNetwork(TorchModelV2, nn.Module):
         self._features = conv_out
         return conv_out, state
 
-    # @override(TorchModelV2)
-    # def value_function(self) -> TensorType:
-    #     assert self._features is not None, "must call forward() first"
-    #     if self._value_branch_separate:
-    #         value = self._value_branch_separate(self._features)
-    #         value = value.squeeze(3)
-    #         value = value.squeeze(2)
-    #         return value.squeeze(1)
-    #     else:
-    #         if not self.last_layer_is_flattened:
-    #             features = self._features.squeeze(3)
-    #             features = features.squeeze(2)
-    #         else:
-    #             features = self._features
-    #         return self._value_branch(features).squeeze(1)
+    @override(TorchModelV2)
+    def value_function(self) -> TensorType:
+        # assert self._features is not None, "must call forward() first"
+        # if self._value_branch_separate:
+        #     value = self._value_branch_separate(self._features)
+        #     value = value.squeeze(3)
+        #     value = value.squeeze(2)
+        #     return value.squeeze(1)
+        # else:
+        #     if not self.last_layer_is_flattened:
+        #         features = self._features.squeeze(3)
+        #         features = features.squeeze(2)
+        #     else:
+        #         features = self._features
+        # print(self._features)
+        value = self.value_branch(self._features)
+        # print(value)
+        # value = value.squeeze(3)
+        # value = value.squeeze(2)
+        return value.squeeze(1)
 
     # def _hidden_layers(self, obs: TensorType) -> TensorType:
     #     res = self._convs(obs.permute(0, 3, 1, 2))  # switch to channel-major

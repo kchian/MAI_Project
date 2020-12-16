@@ -69,7 +69,7 @@ class Lumberjack(gym.Env):
         # Rllib Parameters
         self.num_outputs = 1
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
-        self.action_space = Box(np.array([-1, -1]), np.array([1, 1]),dtype=np.float32)
+        self.action_space = Box(np.array([-1]), np.array([1]),dtype=np.float32)
         self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
 
 
@@ -99,7 +99,9 @@ class Lumberjack(gym.Env):
         self.steps.append(current_step + self.episode_step)
         self.episode_return = 0
         self.episode_step = 0
-
+        print(self.returns)
+        print("WHAT THE FUCK IS GOING ON")
+        print(os.getcwd())
         # Log
         if len(self.returns) > self.log_frequency and \
             len(self.returns) % self.log_frequency == 0:
@@ -113,10 +115,8 @@ class Lumberjack(gym.Env):
     def step(self, action):
         """
         Take an action in the environment and return the results.
-
         Args
             action: <int> index of the action to take
-
         Returns
             observation: <np.array> flattened array of obseravtion
             reward: <int> reward from taking action
@@ -127,12 +127,9 @@ class Lumberjack(gym.Env):
         reward = 0
         print(action)
         self.agent_host.sendCommand(f"move {(action[0]/4):30.1f}")
-        self.agent_host.sendCommand(f"turn {(action[1]/4):30.1f}")
-
         # negative reward for spinning
         reward -= 1# abs(action[0]) * 1
-        # Try upping this
-        time.sleep(1)
+        time.sleep(.2)
         self.episode_step += 1
 
         # Get Done
@@ -162,9 +159,8 @@ class Lumberjack(gym.Env):
         reward += log_pixels/20
         self.episode_return += reward
         # Get Reward
-
-
         return self.obs, reward, done, dict()
+
 
     def init_malmo(self):
         #Record Mission 
@@ -178,8 +174,8 @@ class Lumberjack(gym.Env):
         max_retries = 5
         my_clients = MalmoPython.ClientPool()
         my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
-        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
-        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
+        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
+        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
         # Attempt to start a mission:
         for retry in range(max_retries):
             try:
@@ -213,6 +209,7 @@ class Lumberjack(gym.Env):
                         obs = np.reshape(pixels, (WIDTH, HEIGHT, 3)).astype(np.uint8)
                         obs = obs / (255 / 2) - 1
                         # scale to between -1, 1
+                        # print(obs)
                         return obs, log_pixels
         return obs, 0
     
@@ -280,8 +277,8 @@ def on_postprocess_traj(info):
 
 
 if __name__ == '__main__':
-    ray.init()
-    ModelCatalog.register_custom_model("my_model", VisionNetwork)
+    ray.init(address='auto')
+    ModelCatalog.register_custom_model("my_model", CustomVisionNetwork)
     
     trainer = ppo.PPOTrainer(env=Lumberjack, config={
         'env_config': {},           # No environment parameters to configure
@@ -298,17 +295,17 @@ if __name__ == '__main__':
         # `rllib train` command, you can also use the `-v` and `-vv` flags as
         # shorthand for INFO and DEBUG.
         "log_level": "DEBUG",
-
+        "vf_clip_param": 500,
         # For example, given rollout_fragment_length=100 and train_batch_size=1000:
         #   1. RLlib collects 10 fragments of 100 steps each from rollout workers.
         #   2. These fragments are concatenated and we perform an epoch of SGD.
-        "rollout_fragment_length": 64,
-        "sgd_minibatch_size": 64,
+        "rollout_fragment_length": 128,
+        "sgd_minibatch_size": 128,
 
         # Training batch size, if applicable. Should be >= rollout_fragment_length.
         # Samples batches will be concatenated together to a batch of this size,
         # which is then passed to SGD.
-        "train_batch_size": 128,
+        "train_batch_size": 256,
         "gamma": 0.99,
         # Whether to clip rewards during Policy's postprocessing.
         # None (default): Clip for Atari only (r=sign(r)).
@@ -333,7 +330,7 @@ if __name__ == '__main__':
         },
         "preprocessor_pref": "deepmind",
         # The default learning rate.
-        "lr": 0.0001,
+        "lr": 0.00001,
         # "callbacks": {#"on_episode_start": on_episode_start, 
         #                             #"on_episode_step": on_episode_step, 
         #                             #"on_episode_end": on_episode_end, 
@@ -375,9 +372,9 @@ if __name__ == '__main__':
     #         "no_final_linear": True,
     #     }
     # })
-    # os.chdir(r'')
+    os.chdir(r'C:\Users\Kevin\Documents\classes\CS175\temp\ftp')
     # print(os.listdir())
-    trainer.restore(r"C:\Users\Kevin\ray_results\turn\rip")
+#    trainer.restore(r"C:\Users\Kevin\ray_results\no_turn\rip")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()
