@@ -25,32 +25,31 @@ class QNetwork(nn.Module):
     def __init__(self, obs_size, action_size):
         super(QNetwork, self).__init__()
         self.layer1 = nn.Sequential(
-            nn.Conv2d(1, 1, kernel_size=10, stride=10, padding=0),
+            nn.Conv2d(3, 3, kernel_size=10, stride=10, padding=0),
             nn.ReLU())
         self.layer2 = nn.Sequential(
-            nn.Conv2d(1, 1, kernel_size=10, stride=10, padding=0),
+            nn.Conv2d(3, 32, kernel_size=5, stride=5, padding=0),
             nn.ReLU())
         self.layer3 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+            nn.Conv2d(32, 64, kernel_size=3, stride=3, padding=0),
             nn.ReLU())
         self.layer4 = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
+            nn.Conv2d(64, 64, kernel_size=2, stride=1, padding=0),
             nn.ReLU())
         self.drop_out = nn.Dropout()
         #self.lstm = torch.nn.LSTM(120, 0, 2)
-        self.fc1 = nn.Linear(40, action_size, nn.ReLU())
-        self.fc2 = nn.Linear(30, action_size, nn.ReLU())
+        self.fc1 = nn.Linear(512, 300, nn.ReLU())
+        self.fc2 = nn.Linear(300, action_size, nn.ReLU())
 
     def forward(self, x):
-        #out = cv2.resize(out, dsize=(8, 5), interpolation=cv2.INTER_CUBIC)
         out = self.layer1(x)
         out = self.layer2(out)
-        #out = self.layer3(out)
-        #out = self.layer4(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
         out = out.reshape(out.size(0), -1)
-        #out = self.drop_out(out)
+        out = self.drop_out(out)
         #out, _ = self.lstm(out.view(len(out), 1, -1))
         #out = self.fc1(out.view(len(x), -1))
         out = self.fc1(out)
-        #out = self.fc2(out)
+        out = self.fc2(out)
         return out

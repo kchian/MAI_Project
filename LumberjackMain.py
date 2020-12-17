@@ -23,15 +23,17 @@ from multiprocessing import Process
 
 from math import log
 
+from PIL import Image
+
 #Hyperparameters
 MAX_EPISODE_STEPS = 300
 MAX_GLOBAL_STEPS = 100000
-REPLAY_BUFFER_SIZE = 1
-MIN_EPSILON = 1
+REPLAY_BUFFER_SIZE = 500
+MIN_EPSILON = .05
 BATCH_SIZE = 300
 GAMMA = .9
 TARGET_UPDATE = 1500
-START_TRAINING = 500000
+START_TRAINING = 500
 LEARN_FREQUENCY = 500
 LEARNING_RATE = 1e-4
 EPSILON_DECAY = .95
@@ -41,10 +43,11 @@ EPSILON_DECAY = .95
 #from PigKill import getXML
 #from LumberFense import getXML
 from LumberBlockChase import getXML
+#from Pig import getXML
 SIZE = 4
 
 #Model Saving and Loading
-version = 8.45
+version = 9.0
 PATH = r"c:/Users/ldkea/Desktop/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Python_Examples/MAI_Project/Models/" + str(version) + "state_dict_model%d.pt" #Path to save model
 LOAD = False
 MODELNUM = 75
@@ -121,7 +124,7 @@ def get_observation(world_state):
     #Normalize image
     obs = np.true_divide(obs, 255)
     #Greyscale
-    obs = np.array([greyscale(obs)])
+    #obs = np.array([greyscale(obs)])
     return obs
 
 def prepare_batch(replay_buffer):
@@ -286,7 +289,7 @@ def train(agent_host):
             obs = get_observation(world_state)
 
             # Run episode
-            while world_state.is_mission_running:
+            while True:
                 # Learn
                 global_step += 1
                 last+=1
@@ -310,13 +313,6 @@ def train(agent_host):
                 episode_step += 1
                 if episode_step >= MAX_EPISODE_STEPS:
                     done = True
-                    time.sleep(2)
-                    '''
-                        or \
-                    (obs[0, int(OBS_SIZE/2)-1, int(OBS_SIZE/2)] == 1 and \
-                    obs[1, int(OBS_SIZE/2)-1, int(OBS_SIZE/2)] == 0 and \
-                    command == 'move 1'):
-                    '''
 
                 # Get next observation
                 world_state = agent_host.getWorldState()
@@ -324,6 +320,19 @@ def train(agent_host):
                     print("Error:", error.text)
                 next_obs = get_observation(world_state) 
 
+
+
+                for o in world_state.observations:
+                    msg = o.text
+                    observations = json.loads(msg)
+                    if u'LineOfSight' in observations:
+                        los = observations[u'LineOfSight']
+                        if los["type"] == "Pig":
+                            reward += 5
+                            agent_host.sendCommand("attack 1")
+                            time.sleep(0.5)
+                            agent_host.sendCommand("attack 0")
+                            
                 # Get reward
                 reward = -1
                 if command[-1]=='0':
@@ -340,16 +349,15 @@ def train(agent_host):
 
                 replay_buffer.append((obs, action_idx, next_obs, reward, done))
 
-                if reward > 0:
-                    TOUCHED+=1
-                    for i in range(MAX_EPISODE_STEPS):
-                        agent_host.sendCommand(command)
-                    time.sleep(3)
+                obs = next_obs
+                
+                if not world_state.is_mission_running:
                     break
 
-                obs = next_obs
-
-
+            if episode_return>500:
+                TOUCHED+=1
+            if episode_return > 3000:
+                death+=1
             if global_step > START_TRAINING and last>=LEARN_FREQUENCY:
                 print("\nLearning")
                 last = 0
@@ -373,6 +381,7 @@ def train(agent_host):
                 num_episode, global_step, (time.time() - start_time) / 60, episode_loss, episode_return, avg_return))
             TIMES+=1
             print("\nSuccess Rate: ", TOUCHED/TIMES)
+            print("\nDeath Rate:   ", death/TIMES)
 
             #Save model and log returns every hundred episodes
             if num_episode%25==0:
