@@ -30,7 +30,7 @@ from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
-LOAD = True
+LOAD = False
 WIDTH, HEIGHT = (20, 20)
 
 
@@ -105,7 +105,7 @@ class Lumberjack(gym.Env):
         """
         # Get Action
         reward = 0
-        print(action)
+        action = [random.uniform(-1,1),random.uniform(-1,1)]
         self.agent_host.sendCommand(f"move {(action[0]):30.1f}")
         self.agent_host.sendCommand(f"turn {(action[1]):30.1f}")
 
