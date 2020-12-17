@@ -26,12 +26,12 @@ from math import log
 #Hyperparameters
 MAX_EPISODE_STEPS = 300
 MAX_GLOBAL_STEPS = 100000
-REPLAY_BUFFER_SIZE = 500
-MIN_EPSILON = .05
-BATCH_SIZE = 200
+REPLAY_BUFFER_SIZE = 1
+MIN_EPSILON = 1
+BATCH_SIZE = 300
 GAMMA = .9
 TARGET_UPDATE = 1500
-START_TRAINING = 1000
+START_TRAINING = 500000
 LEARN_FREQUENCY = 500
 LEARNING_RATE = 1e-4
 EPSILON_DECAY = .95
@@ -44,10 +44,10 @@ from LumberBlockChase import getXML
 SIZE = 4
 
 #Model Saving and Loading
-version = 8.44
+version = 8.45
 PATH = r"c:/Users/ldkea/Desktop/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Python_Examples/MAI_Project/Models/" + str(version) + "state_dict_model%d.pt" #Path to save model
-LOAD = True
-MODELNUM = 25
+LOAD = False
+MODELNUM = 75
 LOAD_EPSILON  = .7
 MODEL = r"c:/Users/ldkea/Desktop/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Malmo-0.37.0-Windows-64bit_withBoost_Python3.7/Python_Examples/MAI_Project/Models/" + str(version) + "state_dict_model%d.pt"
 
@@ -67,6 +67,10 @@ ACTION_DICT = {
     # 8: 'attack 0',
     # 9: 'pitch 0'
 }
+
+def greyscale(img):
+    return np.array(0.2989 * img[0] + 0.5870 * img[1] + 0.1140 * img[2])
+
 
 def init_malmo(agent_host, n = 0):
     #Record Mission 
@@ -116,6 +120,8 @@ def get_observation(world_state):
                 break
     #Normalize image
     obs = np.true_divide(obs, 255)
+    #Greyscale
+    obs = np.array([greyscale(obs)])
     return obs
 
 def prepare_batch(replay_buffer):
@@ -229,8 +235,8 @@ def train(agent_host):
     TIMES = 0
     death = 0
     #Init networks
-    q_network = QNetwork((3, 800, 500), len(ACTION_DICT))
-    target_network = QNetwork((3, 800, 500), len(ACTION_DICT))
+    q_network = QNetwork((1, 800, 500), len(ACTION_DICT))
+    target_network = QNetwork((1, 800, 500), len(ACTION_DICT))
     if LOAD:
         q_network.load_state_dict(torch.load(MODEL%MODELNUM))
         q_network.eval()
@@ -387,7 +393,7 @@ def train(agent_host):
             except:
                 pass
             break
-        except RuntimeError:
+        #except RuntimeError:
             print("\nError: ", num_episode)
             if errors==0:
                 errors = 1

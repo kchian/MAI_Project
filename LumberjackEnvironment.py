@@ -2,6 +2,7 @@ from numpy.random import randint
 
 BLOCK = lambda x, y, z, t: "<DrawBlock x='{}'  y='{}' z='{}' type='{}' />".format(x, y, z, t)
 CUBOID = lambda x1, x2, y1, y2, z1, z2, t:"<DrawCuboid x1='{}' x2='{}' y1='{}' y2='{}' z1='{}' z2='{}' type='{}'/>".format(x1, x2, y1, y2, z1, z2, t)
+LINE   = lambda x1, x2, y1, y2, z1, z2, t:'<DrawLine x1="{}" y1="{}" z1="{}" x2="{}" y2="{}" z2="{}" type="{}"/>'.format(x1, y1, z1, x2, y2, z2, t)
 
 def drawTree(coord):
     x, z = coord
@@ -13,11 +14,13 @@ def drawTree(coord):
         tree+=BLOCK(x, y+2, z, "log")
     return tree
 
-def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
-    treePos = [randint(-SIZE, SIZE) for i in range(2)]
-    startX, startZ   = [randint(-SIZE, SIZE) for i in range(2)]
+def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10, n = 0, FENSE = False):
+    generators = ['3;7,2;1;', '2;7,2x3,2;1;', '2;7,3,2;1;', '2;2x7,3,2;1;', '2;3,2;1;', '2;2;1;', '2;2x2;1;', '2;3x2;1;', '2;4x2;1;']
+    generator = generators[n]
+    treePos = [randint(-SIZE+1, SIZE-1) for i in range(2)]
+    startX, startZ   = [randint(-SIZE+1, SIZE-1) for i in range(2)]
     while treePos==[startX, startZ]:
-        startX, startZ   = [randint(-SIZE, SIZE) for i in range(2)]
+        startX, startZ   = [randint(-SIZE+1, SIZE-1) for i in range(2)]
     startX+=0.5
     startZ+=0.5
     return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
@@ -34,11 +37,17 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
                         <Weather>clear</Weather>
                     </ServerInitialConditions>
                     <ServerHandlers>
-                        <FlatWorldGenerator generatorString="3;7,2;1;"/>
+                        <FlatWorldGenerator generatorString="''' + \
+                            generator + \
+                                '''"/>
                         <DrawingDecorator>''' + \
                             "<DrawCuboid x1='{}' x2='{}' y1='0' y2='10' z1='{}' z2='{}' type='air'/>".format(-SIZE-100, SIZE+100, -SIZE-100, SIZE+100) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='-1' z1='{}' z2='{}' type='grass'/>".format(-SIZE*2, SIZE*2, -SIZE*2, SIZE*2) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
+                            '<DrawLine x1="{}" y1="2" z1="{}" x2="{}" y2="2" z2="{}" type="fence"/>'.format(int(SIZE), int(SIZE), int(SIZE), -int(SIZE)) * FENSE + \
+                            '<DrawLine x1="{}" y1="2" z1="{}" x2="{}" y2="2" z2="{}" type="fence"/>'.format(-int(SIZE), int(SIZE), -int(SIZE), -int(SIZE)) * FENSE + \
+                            '<DrawLine x1="{}" y1="2" z1="{}" x2="{}" y2="2" z2="{}" type="fence"/>'.format(int(SIZE), int(SIZE), -int(SIZE), int(SIZE))  * FENSE+ \
+                            '<DrawLine x1="{}" y1="2" z1="{}" x2="{}" y2="2" z2="{}" type="fence"/>'.format(int(SIZE), -int(SIZE), -int(SIZE), -int(SIZE)) * FENSE + \
                             drawTree(treePos) + \
                             '''
                         </DrawingDecorator>
@@ -66,8 +75,11 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
                             <Width>800</Width>
                             <Height>500</Height>
                         </ColourMapProducer>
+                        <AgentQuitFromTouchingBlockType>
+                            <Block type="log"/>
+                        </AgentQuitFromTouchingBlockType>
                         <RewardForTouchingBlockType>
-                            <Block type="log" reward="150"/>
+                            <Block type="log" reward="1"/>
                         </RewardForTouchingBlockType>
                         <AgentQuitFromReachingCommandQuota total="'''+str(MAX_EPISODE_STEPS)+'''" />
                         <RewardForMissionEnd>
@@ -79,10 +91,6 @@ def getXML(MAX_EPISODE_STEPS = 1000, SIZE  = 10):
                         <ObservationFromDistance>
                             <Marker name="Tree" x="'''+str(treePos[0])+'''" y="0" z="'''+str(treePos[1])+'''"/>
                         </ObservationFromDistance>
-                        <AgentQuitFromTouchingBlockType>
-                            <Block type="log"/>
-                        </AgentQuitFromTouchingBlockType>
                     </AgentHandlers>
                 </AgentSection>
             </Mission>'''
-    
