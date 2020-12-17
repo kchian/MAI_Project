@@ -196,9 +196,8 @@ class Lumberjack(gym.Env):
             if len(world_state.video_frames):
                 for frame in reversed(world_state.video_frames):
                     if frame.channels == 3:
-                        log_pixels = self.drawer.showFrame(frame)
-                        pixels = frame.pixels
-                        obs = np.reshape(pixels, (WIDTH, HEIGHT, 3)).astype(np.uint8)
+                        log_pixels, obs = self.drawer.showFrame(frame)
+                        # pixels = frame.pixels
                         obs = obs / (255 / 2) - 1
                         # scale to between -1, 1
                         return obs.flatten(), log_pixels
@@ -275,7 +274,7 @@ if __name__ == '__main__':
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 2,            # We aren't using parallelism
+        'num_workers': 1,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
         # "monitor": True,
@@ -372,7 +371,7 @@ if __name__ == '__main__':
     # os.chdir(r'')
     # print(os.listdir())
     if LOAD:
-        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_151\check")
+        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\open_world_withpunch_linear\checkpoint_342\check")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()
