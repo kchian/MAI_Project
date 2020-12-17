@@ -23,7 +23,7 @@ from ray.rllib.agents import ppo
 from ray.rllib.models import ModelCatalog
 from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 #-----------------------
-from LumberjackEnvironment import getXML
+from PigCatchOpen import getXML
 from LumberjackQNet import VisionNetwork
 from CustomVision import CustomVisionNetwork
 from FCNet import FCNet
@@ -48,7 +48,7 @@ class Lumberjack(gym.Env):
         # Rllib Parameters
         self.num_outputs = 2
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
-        self.action_space = Box(np.array([-1, -0.25]), np.array([1, 0.25]),dtype=np.float32)
+        self.action_space = Box(np.array([-1, -0.5]), np.array([1, 0.5]),dtype=np.float32)
         # self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
         self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*3,), dtype=np.float32)
 
@@ -108,14 +108,17 @@ class Lumberjack(gym.Env):
         print(action)
         self.agent_host.sendCommand(f"move {(action[0]):30.1f}")
         self.agent_host.sendCommand(f"turn {(action[1]):30.1f}")
-
+        self.agent_host.sendCommand("attack 0")
+        
         # negative reward for spinning
-        reward -= abs(action[0]) * 10
-        reward -= abs(action[1]) * 10
+        reward -= abs(action[0]) * 5
+        reward -= abs(action[1]) * 20
         # Try upping this
-        time.sleep(0.5)
+        time.sleep(0.3)
+        self.agent_host.sendCommand(f"move 0")
+        self.agent_host.sendCommand(f"turn 0")
         self.episode_step += 1
-
+        time.sleep(0.1)
         # Get Done
         world_state = self.agent_host.getWorldState()
 
@@ -140,7 +143,7 @@ class Lumberjack(gym.Env):
             #             # distance
             #             print(sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5)
             #             reward += (10 - sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5) * 10
-            if u'LineOfSight' in observations and abs(action[1]) < 0.2:
+            if u'LineOfSight' in observations:
                 los = observations[u'LineOfSight']
                 if los["type"] == "Pig":
                     reward += 300
@@ -273,7 +276,7 @@ if __name__ == '__main__':
     trainer = ppo.PPOTrainer(env=Lumberjack, config={
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
-        'num_gpus': 0,              # We aren't using GPUs
+        'num_gpus': 1,              # We aren't using GPUs
         'num_workers': 1,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
@@ -371,7 +374,7 @@ if __name__ == '__main__':
     # os.chdir(r'')
     # print(os.listdir())
     if LOAD:
-        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\open_world_withpunch_linear\checkpoint_342\check")
+        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()
