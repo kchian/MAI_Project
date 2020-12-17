@@ -47,8 +47,8 @@ class draw_helper(object):
 
     def showFrame(self, frame):
         orig_image = Image.frombytes('RGB', (input_width, input_height), bytes(frame.pixels))
-        output_frame = orig_image.resize((output_width, output_height))
-        display = output_frame.resize((display_width, display_height), Image.ANTIALIAS)
+        output_frame = orig_image.resize((output_width, output_height),  Image.NEAREST)
+        display = output_frame.resize((display_width, display_height), Image.BOX)
         c = orig_image.getcolors(input_width * input_height)
         if c:
             log_pixels = {color: count for count, color in c}
