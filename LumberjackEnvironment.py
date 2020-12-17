@@ -40,8 +40,7 @@ def getXML():
         pigs.append(pigPos)
     startX+=0.5
     startZ+=0.5
-    
- 
+
     return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 <About>
@@ -86,8 +85,8 @@ def getXML():
                         <ObservationFromRay/>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>
-                            <Width>20</Width>
-                            <Height>20</Height>
+                            <Width>1200</Width>
+                            <Height>1200</Height>
                         </ColourMapProducer>
                         <RewardForDamagingEntity>
                             <Mob type="Pig" reward="1000"/>
