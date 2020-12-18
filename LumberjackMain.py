@@ -149,6 +149,7 @@ class Lumberjack(gym.Env):
                     reward += 300
                     self.agent_host.sendCommand("attack 1")
                     self.agent_host.sendCommand("attack 0")
+                    time.sleep(0.1)
         self.obs, log_pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
@@ -158,6 +159,7 @@ class Lumberjack(gym.Env):
         return self.obs, reward, done, dict()
 
     def init_malmo(self):
+        print("doing init malmo")
         #Record Mission 
         my_mission = MalmoPython.MissionSpec(getXML(), True)
         my_mission_record = MalmoPython.MissionRecordSpec()
@@ -165,13 +167,14 @@ class Lumberjack(gym.Env):
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
         # my_mission.requestVideo(WIDTH, HEIGHT)
         my_mission.setViewpoint(0)
-
+        print("adding to client pool")
         max_retries = 5
         my_clients = MalmoPython.ClientPool()
         my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
-        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
+        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
         # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
         # Attempt to start a mission:
+        print("attempting to start a mission")
         for retry in range(max_retries):
             try:
                 self.agent_host.startMission( my_mission, my_clients, my_mission_record, 0, 'wtf')
@@ -188,7 +191,7 @@ class Lumberjack(gym.Env):
             world_state = self.agent_host.getWorldState()
             for error in world_state.errors:
                 print("\nError:", error.text)
-
+        print("done with init malmo")
         return world_state
 
     def get_observation(self, world_state):
@@ -276,7 +279,7 @@ if __name__ == '__main__':
     trainer = ppo.PPOTrainer(env=Lumberjack, config={
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
-        'num_gpus': 1,              # We aren't using GPUs
+        'num_gpus': 0,              # We aren't using GPUs
         'num_workers': 1,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
@@ -331,6 +334,7 @@ if __name__ == '__main__':
         #                             "on_postprocess_traj": on_postprocess_traj,
         #                             #"on_train_result": on_train_result,
         #                             },
+        "vf_clip_param":500,
         "model": {
             "custom_model": "my_model",
             # "dim": 84, 

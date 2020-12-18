@@ -33,17 +33,18 @@ def drawPlus(coord):
     out = ""
     for i in block_coords:
         out += "<DrawBlock x='{}' y='2' z='{}'type='diamond_block'/>".format(*i)
-        blocklist.append(i)
+        # blocklist.append(i)
 
     return out
 
 def drawPig(coord):
-    return '<DrawEntity x="{}" y="2" z="{}" type="Pig"/>'.format(coord[0], coord[1])
+    return '<DrawEntity x="{}" y="3" z="{}" type="Pig"/>'.format(coord[0], coord[1])
 
 def getXML():
+    global blocklist
     startX, startZ = (0.5, 0.5)
 
-    return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+    out = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 <About>
                     <Summary>MAI Lumberjack</Summary>
@@ -97,12 +98,13 @@ def getXML():
                         <RewardForMissionEnd rewardForDeath="-1">
                             <Reward description="out_of_time" reward="00" />
                         </RewardForMissionEnd>
-                        <AgentQuitFromTimeUp timeLimitMs="60000" description="out_of_time"/>
+                        <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
                         <ObservationFromNearbyEntities>
                             <Range name="entities" xrange="300" yrange="60" zrange="60"/>
                         </ObservationFromNearbyEntities>
                     </AgentHandlers>
                 </AgentSection>
             </Mission>'''
-    
+    blocklist = [[i, j] for i in range(-1, 2) for j in range(-1, 2)]
+    return out
 #                             <Block type="log" reward="10.0" behaviour="oncePerTimeSpan" cooldownInMs="0.1"/>
