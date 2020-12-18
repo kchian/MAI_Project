@@ -111,8 +111,8 @@ class Lumberjack(gym.Env):
         self.agent_host.sendCommand("attack 0")
         
         # negative reward for spinning
-        reward -= abs(action[0]) * 5
-        reward -= abs(action[1]) * 20
+        reward -= abs(action[0])
+        reward -= abs(action[1]) * 4
         # Try upping this
         time.sleep(0.3)
         self.agent_host.sendCommand(f"move 0")
@@ -146,14 +146,14 @@ class Lumberjack(gym.Env):
             if u'LineOfSight' in observations:
                 los = observations[u'LineOfSight']
                 if los["type"] == "Pig":
-                    reward += 300
+                    reward += 30
                     self.agent_host.sendCommand("attack 1")
                     self.agent_host.sendCommand("attack 0")
                     time.sleep(0.1)
-        self.obs, log_pixels = self.get_observation(world_state) 
+        self.obs, pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += log_pixels * 20
+        reward += pixels
         self.episode_return += reward
         # Get Reward
         return self.obs, reward, done, dict()
@@ -202,11 +202,11 @@ class Lumberjack(gym.Env):
             if len(world_state.video_frames):
                 for frame in reversed(world_state.video_frames):
                     if frame.channels == 3:
-                        log_pixels, obs = self.drawer.showFrame(frame)
+                        pig_pixels, obs = self.drawer.showFrame(frame)
                         # pixels = frame.pixels
                         obs = obs / (255 / 2) - 1
                         # scale to between -1, 1
-                        return obs.flatten(), log_pixels
+                        return obs.flatten(), pig_pixels
         return obs.flatten(), 0
     
     
@@ -334,7 +334,6 @@ if __name__ == '__main__':
         #                             "on_postprocess_traj": on_postprocess_traj,
         #                             #"on_train_result": on_train_result,
         #                             },
-        "vf_clip_param":500,
         "model": {
             "custom_model": "my_model",
             # "dim": 84, 

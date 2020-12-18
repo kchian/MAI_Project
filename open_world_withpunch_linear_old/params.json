@@ -12,10 +12,9 @@
     "custom_model": "my_model"
   },
   "num_gpus": 0,
-  "num_workers": 1,
+  "num_workers": 2,
   "preprocessor_pref": "deepmind",
   "rollout_fragment_length": 64,
   "sgd_minibatch_size": 64,
-  "train_batch_size": 128,
-  "vf_clip_param": 500
+  "train_batch_size": 128
 }
