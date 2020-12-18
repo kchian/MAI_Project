@@ -93,7 +93,7 @@ def getXML():
                             <Height>1200</Height>
                         </ColourMapProducer>
                         <RewardForDamagingEntity>
-                            <Mob type="Pig" reward="600"/>
+                            <Mob type="Pig" reward="60"/>
                         </RewardForDamagingEntity>
                         <RewardForMissionEnd rewardForDeath="-1">
                             <Reward description="out_of_time" reward="00" />
