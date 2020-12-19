@@ -4,7 +4,7 @@ BLOCK = lambda x, y, z, t: "<DrawBlock x='{}'  y='{}' z='{}' type='{}' />".forma
 CUBOID = lambda x1, x2, y1, y2, z1, z2, t:"<DrawCuboid x1='{}' x2='{}' y1='{}' y2='{}' z1='{}' z2='{}' type='{}'/>".format(x1, x2, y1, y2, z1, z2, t)
 SIZE = 15
 # don't let things spawn on top of the user
-blocklist = [[i, j] for i in range(-1, 2) for j in range(-1, 2)]
+blocklist = [[i, j] for i in range(-7, 8) for j in range(-7, 8)]
 
 def drawTree(coord):
     x, z = coord
@@ -64,9 +64,7 @@ def getXML():
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZE - 1, SIZE + 1, -SIZE - 1, SIZE + 1) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            "".join(drawTree(getCoord()) for coord in range(8)) + \
-                            "".join(drawPlus(getCoord()) for coord in range(8)) + \
-                            "".join(drawPig(getCoord()) for coord in range(5)) + \
+                            "".join(drawPig(getCoord()) for coord in range(1)) + \
                             '''
                         </DrawingDecorator>
                         <ServerQuitWhenAnyAgentFinishes/>
@@ -105,6 +103,6 @@ def getXML():
                     </AgentHandlers>
                 </AgentSection>
             </Mission>'''
-    blocklist = [[i, j] for i in range(-1, 2) for j in range(-1, 2)]
+    blocklist = [[i, j] for i in range(-7, 8) for j in range(-7, 8)]
     return out
 #                             <Block type="log" reward="10.0" behaviour="oncePerTimeSpan" cooldownInMs="0.1"/>

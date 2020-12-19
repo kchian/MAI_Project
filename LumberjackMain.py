@@ -30,7 +30,7 @@ from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
-LOAD = True
+LOAD = False
 WIDTH, HEIGHT = (20, 20)
 
 
@@ -112,7 +112,7 @@ class Lumberjack(gym.Env):
         
         # negative reward for spinning
         reward -= abs(action[0])
-        reward -= abs(action[1]) * 4
+        reward -= abs(action[1]) * 10
         # Try upping this
         time.sleep(0.3)
         self.agent_host.sendCommand(f"move 0")
@@ -153,7 +153,7 @@ class Lumberjack(gym.Env):
         self.obs, pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += pixels
+        reward += pixels * 20
         self.episode_return += reward
         # Get Reward
         return self.obs, reward, done, dict()
