@@ -1,0 +1,21 @@
+{
+  "env_config": {},
+  "exploration_config": {
+    "type": "StochasticSampling"
+  },
+  "explore": true,
+  "framework": "torch",
+  "gamma": 0.99,
+  "log_level": "DEBUG",
+  "lr": 0.0001,
+  "model": {
+    "custom_model": "my_model"
+  },
+  "num_gpus": 0,
+  "num_workers": 2,
+  "preprocessor_pref": "deepmind",
+  "rollout_fragment_length": 64,
+  "sgd_minibatch_size": 64,
+  "train_batch_size": 128,
+  "vf_clip_param": 500
+}

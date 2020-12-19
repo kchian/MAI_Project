@@ -112,6 +112,7 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
                             </ModifierList>
                         </ContinuousMovementCommands>
                         <ObservationFromRay/>
+                        <MissionQuitCommands/>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>
                             <Width>1200</Width>

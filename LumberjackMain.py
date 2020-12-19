@@ -30,7 +30,7 @@ from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
-LOAD = False
+LOAD = True
 WIDTH, HEIGHT = (20, 20)
 pig_color = np.array([1, 57, 110])
 
@@ -144,14 +144,13 @@ class Lumberjack(gym.Env):
             # https://github.com/microsoft/malmo/blob/master/Malmo/samples/Python_examples/hit_test.py
             msg = o.text
             observations = json.loads(msg)
-            # if 'entities' in observations:
-            #     agent_pos = [observations['XPos'], observations['YPos'], observations['ZPos']]
-            #     for entity in observations['entities']:
-            #         if entity['name'] == 'Pig':
-            #             pig_pos = [entity['x'], entity['y'], entity['z']]
-            #             # distance
-            #             print(sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5)
-            #             reward += (10 - sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5) * 10
+            if 'entities' in observations and all([entity['name'] != 'Pig' for entity in observations['entities']]):
+                done = True
+                self.agent_host.sendCommand(f"quit")
+                time.sleep(4)
+                world_state = self.agent_host.getWorldState()
+                print(world_state.is_mission_running)
+                break
             if u'LineOfSight' in observations:
                 los = observations[u'LineOfSight']
                 if los["type"] == "Pig":
@@ -392,7 +391,9 @@ if __name__ == '__main__':
     # os.chdir(r'')
     # print(os.listdir())
     if LOAD:
-        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
+        # trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
+        trainer.restore(r"C:\Users\Kevin\ray_results\noobstacle\checkpoint_141\check")
+        
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()
