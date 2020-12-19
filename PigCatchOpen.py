@@ -40,6 +40,9 @@ def drawPlus(coord):
 def drawPig(coord):
     return '<DrawEntity x="{}" y="4" z="{}" type="Pig"/>'.format(coord[0], coord[1])
 
+def drawLava(coord):
+    return "<DrawBlock x='{}' y='1' z='{}'type='lava'/>".format(coord[0], coord[1])
+
 
 def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
     global blocklist
@@ -47,7 +50,7 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
     inventory = ''
     if missiontype == "kill":
         quit_criteria = '''
-            <RewardForMissionEnd rewardForDeath="-1">
+            <RewardForMissionEnd rewardForDeath="-5000">
                 <Reward description="killed" reward="100" />
             </RewardForMissionEnd>
             <AgentQuitFromCollectingItem>
@@ -62,7 +65,7 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
             '''
     else: # if missiontype == "punch"
         quit_criteria = '''
-            <RewardForMissionEnd rewardForDeath="-1">
+            <RewardForMissionEnd rewardForDeath="-5000">
                 <Reward description="out_of_time" reward="00" />
             </RewardForMissionEnd>
             <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
@@ -88,8 +91,9 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZE - 1, SIZE + 1, -SIZE - 1, SIZE + 1) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            "".join(drawTree(getCoord()) for coord in range(8) if obstacles) + \
-                            "".join(drawPlus(getCoord()) for coord in range(8) if obstacles) + \
+                            "".join(drawTree(getCoord()) for coord in range(4) if obstacles) + \
+                            "".join(drawPlus(getCoord()) for coord in range(4) if obstacles) + \
+                            "".join(drawLava(getCoord()) for coord in range(4) if obstacles) + \
                             "".join(drawPig(getCoord()) for coord in range(n_pigs)) + \
                             '''
                         </DrawingDecorator>

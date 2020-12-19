@@ -32,6 +32,7 @@ from FrameProcessor import draw_helper
 
 LOAD = True
 WIDTH, HEIGHT = (20, 20)
+pig_color = np.array([1, 57, 110])
 
 def binary_conv_obs(obs):
     out = np.zeros((WIDTH, HEIGHT))
@@ -168,7 +169,7 @@ class Lumberjack(gym.Env):
     def init_malmo(self):
         print("doing init malmo")
         #Record Mission 
-        my_mission = MalmoPython.MissionSpec(getXML(), True)
+        my_mission = MalmoPython.MissionSpec(getXML(n_pigs=1, obstacles=False, missiontype='kill'), True)
         my_mission_record = MalmoPython.MissionRecordSpec()
         # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
@@ -384,6 +385,7 @@ if __name__ == '__main__':
     # os.chdir(r'')
     # print(os.listdir())
     if LOAD:
+        # this is the checkpoint from something trained in a small environment with a single pig
         trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
