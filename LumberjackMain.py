@@ -160,13 +160,13 @@ class Lumberjack(gym.Env):
             if u'LineOfSight' in observations:
                 los = observations[u'LineOfSight']
                 if los["type"] == "Pig":
-                    reward += 300
+                    reward += 3
                     self.agent_host.sendCommand("attack 1")
                     self.agent_host.sendCommand("attack 0")
         self.obs, pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += pixels * 30
+        reward += pixels * 10
         self.episode_return += reward
         # Get Reward
         return self.obs, reward, done, dict()
@@ -315,7 +315,7 @@ if __name__ == '__main__':
         # Samples batches will be concatenated together to a batch of this size,
         # which is then passed to SGD.
         "train_batch_size": 128,
-        "gamma": 0.99,
+        "gamma": 0.999,
         # Whether to clip rewards during Policy's postprocessing.
         # None (default): Clip for Atari only (r=sign(r)).
         # True: r=sign(r): Fixed rewards -1.0, 1.0, or 0.0.
@@ -392,7 +392,7 @@ if __name__ == '__main__':
     if LOAD:
         # this is the checkpoint from something trained in a small environment with a single pig
         # trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
-        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\lava_pixel\checkpoint_912\check")
+        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\openworld_pixel_1pig\checkpoint_882\check")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()

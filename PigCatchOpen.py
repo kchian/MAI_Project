@@ -4,7 +4,7 @@ BLOCK = lambda x, y, z, t: "<DrawBlock x='{}'  y='{}' z='{}' type='{}' />".forma
 CUBOID = lambda x1, x2, y1, y2, z1, z2, t:"<DrawCuboid x1='{}' x2='{}' y1='{}' y2='{}' z1='{}' z2='{}' type='{}'/>".format(x1, x2, y1, y2, z1, z2, t)
 SIZE = 15
 # don't let things spawn on top of the user
-blocklist = [[i, j] for i in range(-1, 2) for j in range(-1, 2)]
+blocklist = [[i, j] for i in range(-7, 8) for j in range(-7, 8)]
 
 def drawTree(coord):
     x, z = coord
@@ -52,11 +52,12 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
         quit_criteria = '''
             <RewardForMissionEnd rewardForDeath="-5000">
                 <Reward description="killed" reward="100" />
+                <Reward description="out_of_time" reward="-10000" />
             </RewardForMissionEnd>
             <AgentQuitFromCollectingItem>
                 <Item type="porkchop" description="killed"/>
             </AgentQuitFromCollectingItem>
-            <AgentQuitFromTimeUp timeLimitMs="120000" description="out_of_time"/>
+            <AgentQuitFromTimeUp timeLimitMs="40000" description="out_of_time"/>
             '''
         inventory = '''
             <Inventory>
@@ -115,6 +116,7 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
                                 <command>attack</command>
                             </ModifierList>
                         </ContinuousMovementCommands>
+                        <MissionQuitCommands/>
                         <ObservationFromRay/>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>
@@ -132,6 +134,6 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
                     </AgentHandlers>
                 </AgentSection>
             </Mission>'''
-    blocklist = [[i, j] for i in range(-1, 2) for j in range(-1, 2)]
+    blocklist = [[i, j] for i in range(-7, 8) for j in range(-7, 8)]
     return out
 #                             <Block type="log" reward="10.0" behaviour="oncePerTimeSpan" cooldownInMs="0.1"/>
