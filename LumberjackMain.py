@@ -30,8 +30,9 @@ from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
-LOAD = True
+LOAD = False
 WIDTH, HEIGHT = (20, 20)
+pig_color = np.array([1, 57, 110])
 
 def binary_conv_obs(obs):
     out = np.zeros((WIDTH, HEIGHT))
@@ -57,8 +58,7 @@ class Lumberjack(gym.Env):
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
         self.action_space = Box(np.array([-1, -0.5]), np.array([1, 0.5]),dtype=np.float32)
         # self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
-        self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*3,), dtype=np.float32)
-
+        self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*1,), dtype=np.float32)
 
         # Malmo Parameters
         self.agent_host = MalmoPython.AgentHost()
@@ -68,6 +68,7 @@ class Lumberjack(gym.Env):
         self.episode_step = 0
         self.episode_return = 0
         self.returns = []
+        self.times = []
         self.steps = []
 
     def reset(self):
@@ -86,7 +87,7 @@ class Lumberjack(gym.Env):
         self.steps.append(current_step + self.episode_step)
         self.episode_return = 0
         self.episode_step = 0
-
+        self.start = time.time()
         # Log
         if len(self.returns) > self.log_frequency and \
             len(self.returns) % self.log_frequency == 0:
@@ -131,6 +132,7 @@ class Lumberjack(gym.Env):
 
         done = False
         if not world_state.is_mission_running:
+            self.times.append(time.time() - self.start) 
             done = True
             time.sleep(4)
 
@@ -168,7 +170,7 @@ class Lumberjack(gym.Env):
     def init_malmo(self):
         print("doing init malmo")
         #Record Mission 
-        my_mission = MalmoPython.MissionSpec(getXML(), True)
+        my_mission = MalmoPython.MissionSpec(getXML(n_pigs=1, obstacles=False, missiontype="kill"), True)
         my_mission_record = MalmoPython.MissionRecordSpec()
         # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
@@ -178,7 +180,7 @@ class Lumberjack(gym.Env):
         max_retries = 5
         my_clients = MalmoPython.ClientPool()
         my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
-        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
+        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
         # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
         # Attempt to start a mission:
         print("attempting to start a mission")
@@ -202,7 +204,7 @@ class Lumberjack(gym.Env):
         return world_state
 
     def get_observation(self, world_state):
-        obs = np.zeros((WIDTH, HEIGHT, 3))
+        obs = np.zeros((WIDTH, HEIGHT, 1))
         if world_state.is_mission_running:
             if len(world_state.errors) > 0:
                 raise AssertionError('Could not load grid.')
@@ -211,8 +213,9 @@ class Lumberjack(gym.Env):
                     if frame.channels == 3:
                         pig_pixels, obs = self.drawer.showFrame(frame)
                         # pixels = frame.pixels
-                        obs = obs / (255 / 2) - 1
                         # scale to between -1, 1
+                        # obs = obs / (255 / 2) - 1
+                        obs = binary_conv_obs(obs)
                         return obs.flatten(), pig_pixels
         return obs.flatten(), 0
     
@@ -234,10 +237,15 @@ class Lumberjack(gym.Env):
         plt.xlabel('Steps')
         s = time.time()
         plt.savefig(f'returns{s}.png')
-
+        plt.clf()
+        
         with open(f'returns{s}.txt', 'w') as f:
             for value in self.returns:
                 f.write("{}\n".format(value)) 
+        plt.plot(range(len(self.times)), self.times)
+        plt.savefig(f'times{s}.png')
+        
+
 # The callback function
 def on_postprocess_traj(info):
     """
@@ -287,7 +295,7 @@ if __name__ == '__main__':
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 1,            # We aren't using parallelism
+        'num_workers': 2,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
         # "monitor": True,
