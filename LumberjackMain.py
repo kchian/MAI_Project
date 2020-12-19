@@ -126,7 +126,6 @@ class Lumberjack(gym.Env):
         self.agent_host.sendCommand(f"move 0")
         self.agent_host.sendCommand(f"turn 0")
         self.episode_step += 1
-        time.sleep(0.1)
         # Get Done
         world_state = self.agent_host.getWorldState()
 
@@ -151,17 +150,23 @@ class Lumberjack(gym.Env):
             #             # distance
             #             print(sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5)
             #             reward += (10 - sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5) * 10
+            if 'entities' in observations and all([entity['name'] != 'Pig' for entity in observations['entities']]):
+                done = True
+                self.agent_host.sendCommand(f"quit")
+                time.sleep(4)
+                world_state = self.agent_host.getWorldState()
+                print(world_state.is_mission_running)
+                break
             if u'LineOfSight' in observations:
                 los = observations[u'LineOfSight']
                 if los["type"] == "Pig":
                     reward += 300
                     self.agent_host.sendCommand("attack 1")
                     self.agent_host.sendCommand("attack 0")
-                    time.sleep(0.1)
         self.obs, pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += pixels * 20
+        reward += pixels * 30
         self.episode_return += reward
         # Get Reward
         return self.obs, reward, done, dict()
@@ -169,7 +174,7 @@ class Lumberjack(gym.Env):
     def init_malmo(self):
         print("doing init malmo")
         #Record Mission 
-        my_mission = MalmoPython.MissionSpec(getXML(n_pigs=1, obstacles=False, missiontype='kill'), True)
+        my_mission = MalmoPython.MissionSpec(getXML(n_pigs=1, obstacles=True, missiontype='kill'), True)
         my_mission_record = MalmoPython.MissionRecordSpec()
         # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
@@ -178,8 +183,8 @@ class Lumberjack(gym.Env):
         print("adding to client pool")
         max_retries = 5
         my_clients = MalmoPython.ClientPool()
-        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
-        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
+        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
+        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
         # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
         # Attempt to start a mission:
         print("attempting to start a mission")
@@ -230,7 +235,7 @@ class Lumberjack(gym.Env):
         returns_smooth = np.convolve(self.returns, box, mode='same')
         plt.clf()
         plt.plot(self.steps, returns_smooth)
-        plt.title('Reach the tree')
+        plt.title('With obstacles')
         plt.ylabel('Return')
         plt.xlabel('Steps')
         s = time.time()
@@ -386,7 +391,8 @@ if __name__ == '__main__':
     # print(os.listdir())
     if LOAD:
         # this is the checkpoint from something trained in a small environment with a single pig
-        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
+        # trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
+        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\lava_pixel\checkpoint_912\check")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()
