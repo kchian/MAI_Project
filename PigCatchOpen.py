@@ -14,14 +14,14 @@ def drawTree(coord):
     # tree+=CUBOID(x-2, x+2, height-1, height, z-2, z+2, "leaves")
     for y in range(height):
         #tree+=BLOCK(x, y+2, z, "log")
-        tree+=CUBOID(x, x, 2, 5, z, z, "log")
+        tree+=CUBOID(x, x, 2, 4, z, z, "log")
     return tree
 
 
 def getCoord():
-    treePos = [randint(-SIZE, SIZE) for i in range(2)]
+    treePos = [randint(-SIZE + 1, SIZE - 1) for i in range(2)]
     while treePos in blocklist:
-        treePos  = [randint(-SIZE, SIZE) for i in range(2)]
+        treePos  = [randint(-SIZE + 1, SIZE - 1) for i in range(2)]
     blocklist.append(treePos)
     return treePos
 
@@ -38,11 +38,35 @@ def drawPlus(coord):
     return out
 
 def drawPig(coord):
-    return '<DrawEntity x="{}" y="3" z="{}" type="Pig"/>'.format(coord[0], coord[1])
+    return '<DrawEntity x="{}" y="4" z="{}" type="Pig"/>'.format(coord[0], coord[1])
 
-def getXML():
+
+def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
     global blocklist
     startX, startZ = (0.5, 0.5)
+    inventory = ''
+    if missiontype == "kill":
+        quit_criteria = '''
+            <RewardForMissionEnd rewardForDeath="-1">
+                <Reward description="killed" reward="100" />
+            </RewardForMissionEnd>
+            <AgentQuitFromCollectingItem>
+                <Item type="porkchop" description="killed"/>
+            </AgentQuitFromCollectingItem>
+            <AgentQuitFromTimeUp timeLimitMs="120000" description="out_of_time"/>
+            '''
+        inventory = '''
+            <Inventory>
+                <InventoryItem slot="0" type="diamond_axe"/>
+            </Inventory>
+            '''
+    else: # if missiontype == "punch"
+        quit_criteria = '''
+            <RewardForMissionEnd rewardForDeath="-1">
+                <Reward description="out_of_time" reward="00" />
+            </RewardForMissionEnd>
+            <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
+        '''
 
     out = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -64,9 +88,9 @@ def getXML():
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZE - 1, SIZE + 1, -SIZE - 1, SIZE + 1) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            "".join(drawTree(getCoord()) for coord in range(8)) + \
-                            "".join(drawPlus(getCoord()) for coord in range(8)) + \
-                            "".join(drawPig(getCoord()) for coord in range(5)) + \
+                            "".join(drawTree(getCoord()) for coord in range(8) if obstacles) + \
+                            "".join(drawPlus(getCoord()) for coord in range(8) if obstacles) + \
+                            "".join(drawPig(getCoord()) for coord in range(n_pigs)) + \
                             '''
                         </DrawingDecorator>
                         <ServerQuitWhenAnyAgentFinishes/>
@@ -76,6 +100,7 @@ def getXML():
                     <Name>MAI Lumberjack</Name>
                     <AgentStart>''' + \
                         '<Placement x="{}" y="2" z="{}" pitch="25" yaw="0"/>'.format(startX, startZ) + \
+                        inventory + \
                         '''
                     </AgentStart>
                     <AgentHandlers>
@@ -93,12 +118,10 @@ def getXML():
                             <Height>1200</Height>
                         </ColourMapProducer>
                         <RewardForDamagingEntity>
-                            <Mob type="Pig" reward="60"/>
-                        </RewardForDamagingEntity>
-                        <RewardForMissionEnd rewardForDeath="-1">
-                            <Reward description="out_of_time" reward="00" />
-                        </RewardForMissionEnd>
-                        <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
+                            <Mob type="Pig" reward="600"/>
+                        </RewardForDamagingEntity>''' + \
+                        quit_criteria + \
+                        '''
                         <ObservationFromNearbyEntities>
                             <Range name="entities" xrange="300" yrange="60" zrange="60"/>
                         </ObservationFromNearbyEntities>

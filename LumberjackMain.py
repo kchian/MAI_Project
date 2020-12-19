@@ -33,6 +33,13 @@ from FrameProcessor import draw_helper
 LOAD = True
 WIDTH, HEIGHT = (20, 20)
 
+def binary_conv_obs(obs):
+    out = np.zeros((WIDTH, HEIGHT))
+    for row in range(WIDTH):
+        for col in range(HEIGHT):
+            if (obs[row][col] == pig_color).all():
+                out[row][col] = 1
+    return out 
 
 class Lumberjack(gym.Env):
 
@@ -111,8 +118,8 @@ class Lumberjack(gym.Env):
         self.agent_host.sendCommand("attack 0")
         
         # negative reward for spinning
-        reward -= abs(action[0])
-        reward -= abs(action[1]) * 4
+        reward -= abs(action[0]) * 5
+        reward -= abs(action[1]) * 20
         # Try upping this
         time.sleep(0.3)
         self.agent_host.sendCommand(f"move 0")
@@ -146,14 +153,14 @@ class Lumberjack(gym.Env):
             if u'LineOfSight' in observations:
                 los = observations[u'LineOfSight']
                 if los["type"] == "Pig":
-                    reward += 30
+                    reward += 300
                     self.agent_host.sendCommand("attack 1")
                     self.agent_host.sendCommand("attack 0")
                     time.sleep(0.1)
         self.obs, pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += pixels
+        reward += pixels * 20
         self.episode_return += reward
         # Get Reward
         return self.obs, reward, done, dict()
@@ -291,7 +298,7 @@ if __name__ == '__main__':
         # `rllib train` command, you can also use the `-v` and `-vv` flags as
         # shorthand for INFO and DEBUG.
         "log_level": "DEBUG",
-        # "vf_clip_param": 50,
+        "vf_clip_param": 500,
         # For example, given rollout_fragment_length=100 and train_batch_size=1000:
         #   1. RLlib collects 10 fragments of 100 steps each from rollout workers.
         #   2. These fragments are concatenated and we perform an epoch of SGD.
