@@ -70,6 +70,7 @@ class Lumberjack(gym.Env):
         self.episode_return = 0
         self.returns = []
         self.steps = []
+        self.times = []
 
     def reset(self):
         """
@@ -87,7 +88,7 @@ class Lumberjack(gym.Env):
         self.steps.append(current_step + self.episode_step)
         self.episode_return = 0
         self.episode_step = 0
-
+        self.start = time.time()
         # Log
         if len(self.returns) > self.log_frequency and \
             len(self.returns) % self.log_frequency == 0:
@@ -131,6 +132,9 @@ class Lumberjack(gym.Env):
 
         done = False
         if not world_state.is_mission_running:
+            duration = time.time() - self.start
+            self.times.append(duration)
+            reward += duration * 20
             done = True
             time.sleep(4)
 
@@ -154,8 +158,9 @@ class Lumberjack(gym.Env):
                 done = True
                 self.agent_host.sendCommand(f"quit")
                 time.sleep(4)
-                world_state = self.agent_host.getWorldState()
-                print(world_state.is_mission_running)
+                duration = time.time() - self.start
+                self.times.append(duration)
+                reward += duration * 20
                 break
             if u'LineOfSight' in observations:
                 los = observations[u'LineOfSight']
@@ -240,10 +245,15 @@ class Lumberjack(gym.Env):
         plt.xlabel('Steps')
         s = time.time()
         plt.savefig(f'returns{s}.png')
+        plt.clf()
 
         with open(f'returns{s}.txt', 'w') as f:
             for value in self.returns:
                 f.write("{}\n".format(value)) 
+        plt.plot(range(len(self.times)), self.times)
+        plt.savefig(f'times{s}.png')
+
+
 # The callback function
 def on_postprocess_traj(info):
     """
