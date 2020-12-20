@@ -64,8 +64,7 @@ class Lumberjack(gym.Env):
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
         self.action_space = Box(np.array([-1, -0.5]), np.array([1, 0.5]),dtype=np.float32)
         # self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
-        self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*3,), dtype=np.float32)
-
+        self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*1,), dtype=np.float32)
 
         # Malmo Parameters
         self.agent_host = MalmoPython.AgentHost()
@@ -75,6 +74,7 @@ class Lumberjack(gym.Env):
         self.episode_step = 0
         self.episode_return = 0
         self.returns = []
+        self.times = []
         self.steps = []
         self.times = []
 
@@ -219,7 +219,7 @@ class Lumberjack(gym.Env):
         return world_state
 
     def get_observation(self, world_state):
-        obs = np.zeros((WIDTH, HEIGHT, 3))
+        obs = np.zeros((WIDTH, HEIGHT, 1))
         if world_state.is_mission_running:
             if len(world_state.errors) > 0:
                 raise AssertionError('Could not load grid.')
@@ -228,8 +228,9 @@ class Lumberjack(gym.Env):
                     if frame.channels == 3:
                         pig_pixels, obs = self.drawer.showFrame(frame)
                         # pixels = frame.pixels
-                        obs = obs / (255 / 2) - 1
                         # scale to between -1, 1
+                        # obs = obs / (255 / 2) - 1
+                        obs = binary_conv_obs(obs)
                         return obs.flatten(), pig_pixels
         return obs.flatten(), 0
     
@@ -252,13 +253,11 @@ class Lumberjack(gym.Env):
         s = time.time()
         plt.savefig(f'returns{s}.png')
         plt.clf()
-
         with open(f'returns{s}.txt', 'w') as f:
             for value in self.returns:
                 f.write("{}\n".format(value)) 
         plt.plot(range(len(self.times)), self.times)
         plt.savefig(f'times{s}.png')
-
 
 # The callback function
 def on_postprocess_traj(info):
@@ -309,7 +308,7 @@ if __name__ == '__main__':
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 1,            # We aren't using parallelism
+        'num_workers': 2,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
         # "monitor": True,
