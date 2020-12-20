@@ -11,7 +11,7 @@ def drawTree(coord):
     # tree+=CUBOID(x-2, x+2, height-1, height, z-2, z+2, "leaves")
     for y in range(height):
         #tree+=BLOCK(x, y+2, z, "log")
-        tree+=CUBOID(x-1, x+1, 2, 5, z-1, z+1, "log")
+        tree+=CUBOID(x-1, x+1, 2, , z-1, z+1, "log")
     return tree
 
 def createMarker(index, coord):
@@ -71,6 +71,7 @@ def getXML():
                                 <command>attack</command>
                             </ModifierList>
                         </ContinuousMovementCommands>
+                        <MissionQuitCommands/>
                         <ObservationFromRay/>
                         <ObservationFromFullStats/>
                         <ColourMapProducer>

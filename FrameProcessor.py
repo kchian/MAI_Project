@@ -52,7 +52,6 @@ class draw_helper(object):
         c = output_frame.getcolors(input_width * input_height)
         if c:
             log_pixels = {color: count for count, color in c}
-            print(log_pixels)
         else:
             log_pixels = {}
         display.load()

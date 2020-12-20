@@ -50,9 +50,9 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
     inventory = ''
     if missiontype == "kill":
         quit_criteria = '''
-            <RewardForMissionEnd rewardForDeath="-5000">
+            <RewardForMissionEnd rewardForDeath="-500">
                 <Reward description="killed" reward="100" />
-                <Reward description="out_of_time" reward="-10000" />
+                <Reward description="out_of_time" reward="-1000" />
             </RewardForMissionEnd>
             <AgentQuitFromCollectingItem>
                 <Item type="porkchop" description="killed"/>

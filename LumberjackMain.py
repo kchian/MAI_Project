@@ -23,14 +23,16 @@ from ray.rllib.agents import ppo
 from ray.rllib.models import ModelCatalog
 from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 #-----------------------
-from PigCatchOpen import getXML
+# from PigCatchOpen import getXML
+from PigCatchSmall import getXML
+
 from LumberjackQNet import VisionNetwork
 from CustomVision import CustomVisionNetwork
 from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
-LOAD = False
+LOAD = True
 WIDTH, HEIGHT = (20, 20)
 COLORS = {(0, 93, 162): 0, # wood
             (46, 70, 139): 1, # grass
@@ -185,7 +187,8 @@ class Lumberjack(gym.Env):
     def init_malmo(self):
         print("doing init malmo")
         #Record Mission 
-        my_mission = MalmoPython.MissionSpec(getXML(n_pigs=1, obstacles=True, missiontype='kill'), True)
+        # my_mission = MalmoPython.MissionSpec(getXML(n_pigs=1, obstacles=True, missiontype='kill'), True)
+        my_mission = MalmoPython.MissionSpec(getXML(), True)
         my_mission_record = MalmoPython.MissionRecordSpec()
         # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
@@ -229,8 +232,8 @@ class Lumberjack(gym.Env):
                         pig_pixels, obs = self.drawer.showFrame(frame)
                         # pixels = frame.pixels
                         # scale to between -1, 1
-                        # obs = obs / (255 / 2) - 1
                         obs = binary_conv_obs(obs)
+                        obs = obs / (5 / 2) - 1
                         return obs.flatten(), pig_pixels
         return obs.flatten(), 0
     
@@ -247,7 +250,7 @@ class Lumberjack(gym.Env):
         returns_smooth = np.convolve(self.returns, box, mode='same')
         plt.clf()
         plt.plot(self.steps, returns_smooth)
-        plt.title('With obstacles')
+        plt.title('With obstacles discrete')
         plt.ylabel('Return')
         plt.xlabel('Steps')
         s = time.time()
@@ -308,7 +311,7 @@ if __name__ == '__main__':
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 2,            # We aren't using parallelism
+        'num_workers': 1,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
         # "monitor": True,
@@ -407,7 +410,7 @@ if __name__ == '__main__':
     if LOAD:
         # this is the checkpoint from something trained in a small environment with a single pig
         # trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
-        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\openworld_pixel_1pig\checkpoint_882\check")
+        trainer.restore(r"C:\Users\Kevin\ray_results\PPO_Lumberjack_2020-12-19_23-42-16eu6l_26a\checkpoint_31\check")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()
