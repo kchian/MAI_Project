@@ -32,7 +32,12 @@ from FrameProcessor import draw_helper
 
 LOAD = True
 WIDTH, HEIGHT = (20, 20)
-pig_color = np.array([1, 57, 110])
+COLOURS = {'wood': [0, 93, 162],
+           'grass':[46, 70, 139],
+           'pig': [1, 57, 110],
+           'diamond': [1, 57, 110],
+           'lava': [1, 57, 110]}
+pig_color = np.array()
 
 def binary_conv_obs(obs):
     out = np.zeros((WIDTH, HEIGHT))

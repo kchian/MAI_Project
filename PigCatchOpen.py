@@ -2,7 +2,7 @@ from numpy.random import randint
 
 BLOCK = lambda x, y, z, t: "<DrawBlock x='{}'  y='{}' z='{}' type='{}' />".format(x, y, z, t)
 CUBOID = lambda x1, x2, y1, y2, z1, z2, t:"<DrawCuboid x1='{}' x2='{}' y1='{}' y2='{}' z1='{}' z2='{}' type='{}'/>".format(x1, x2, y1, y2, z1, z2, t)
-SIZE = 15
+SIZE = 10
 # don't let things spawn on top of the user
 blocklist = [[i, j] for i in range(-7, 8) for j in range(-7, 8)]
 
