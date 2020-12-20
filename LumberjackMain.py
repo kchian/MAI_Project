@@ -30,21 +30,22 @@ from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
-LOAD = True
+LOAD = False
 WIDTH, HEIGHT = (20, 20)
-COLOURS = {'wood': [0, 93, 162],
-           'grass':[46, 70, 139],
-           'pig': [1, 57, 110],
-           'diamond': [1, 57, 110],
-           'lava': [1, 57, 110]}
-pig_color = np.array()
+COLORS = {(0, 93, 162): 0, # wood
+            (46, 70, 139): 1, # grass
+            (1, 57, 110): 2, # pig
+            (139, 23, 23): 3, # diamond
+            (185, 185, 70): 4} # lava
 
 def binary_conv_obs(obs):
     out = np.zeros((WIDTH, HEIGHT))
     for row in range(WIDTH):
         for col in range(HEIGHT):
-            if (obs[row][col] == pig_color).all():
-                out[row][col] = 1
+            if (tuple(obs[row][col]) in COLORS):
+                out[row][col] = COLORS[tuple(obs[row][col])]
+            else:
+                out[row][col] = 5
     return out 
 
 class Lumberjack(gym.Env):
@@ -81,7 +82,7 @@ class Lumberjack(gym.Env):
         """
         Resets the environment for the next episode.
 
-        Returns
+        Returnsgit
             observation: <np.array> flattened initial obseravtion
         """
         # Reset Malmo
@@ -301,7 +302,7 @@ def on_postprocess_traj(info):
 
 
 if __name__ == '__main__':
-    ray.init()
+    ray.init(address='auto')
     ModelCatalog.register_custom_model("my_model", FCNet)
     
     trainer = ppo.PPOTrainer(env=Lumberjack, config={
