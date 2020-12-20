@@ -23,16 +23,17 @@ from ray.rllib.agents import ppo
 from ray.rllib.models import ModelCatalog
 from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 #-----------------------
-from PigCatchOpen import getXML
+from PigCatchSmall import getXML
 from LumberjackQNet import VisionNetwork
 from CustomVision import CustomVisionNetwork
 from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
-LOAD = True
+LOAD = False
 WIDTH, HEIGHT = (20, 20)
 pig_color = np.array([1, 57, 110])
+N_PIGS = 5
 
 def binary_conv_obs(obs):
     out = np.zeros((WIDTH, HEIGHT))
@@ -71,6 +72,7 @@ class Lumberjack(gym.Env):
         self.returns = []
         self.steps = []
         self.times = []
+        self.killed_pigs = []
 
     def reset(self):
         """
@@ -89,6 +91,7 @@ class Lumberjack(gym.Env):
         self.episode_return = 0
         self.episode_step = 0
         self.start = time.time()
+        
         # Log
         if len(self.returns) > self.log_frequency and \
             len(self.returns) % self.log_frequency == 0:
@@ -120,8 +123,8 @@ class Lumberjack(gym.Env):
         self.agent_host.sendCommand("attack 0")
         
         # negative reward for spinning
-        reward -= abs(action[0]) * 5
-        reward -= abs(action[1]) * 20
+        reward -= abs(action[0]) * 10
+        reward -= abs(action[1]) * 10
         # Try upping this
         time.sleep(0.3)
         self.agent_host.sendCommand(f"move 0")
@@ -129,12 +132,17 @@ class Lumberjack(gym.Env):
         self.episode_step += 1
         # Get Done
         world_state = self.agent_host.getWorldState()
-
+        
         done = False
         if not world_state.is_mission_running:
             duration = time.time() - self.start
             self.times.append(duration)
-            reward += duration * 20
+            for o in world_state.observations:
+                msg = o.text
+                observations = json.loads(msg)
+                if 'entities' in observations:
+                    self.killed_pigs.append(sum([1 for entity in observations['entities'] if entity['name'] == 'Pig']))
+            reward += 200 - duration * 5
             done = True
             time.sleep(4)
 
@@ -154,14 +162,20 @@ class Lumberjack(gym.Env):
             #             # distance
             #             print(sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5)
             #             reward += (10 - sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5) * 10
-            if 'entities' in observations and all([entity['name'] != 'Pig' for entity in observations['entities']]):
-                done = True
-                self.agent_host.sendCommand(f"quit")
-                time.sleep(4)
-                duration = time.time() - self.start
-                self.times.append(duration)
-                reward += duration * 20
-                break
+            # if no more pigs left
+            if 'entities' in observations:
+                if all([entity['name'] != 'Pig' for entity in observations['entities']]):
+                    done = True
+                    self.agent_host.sendCommand(f"quit")
+                    time.sleep(4)
+                    duration = time.time() - self.start
+                    self.times.append(duration)
+                    self.killed_pigs.append(N_PIGS)
+                    reward += 200 - duration * 5
+                    break
+                for e in observations['entities']:
+                    if e['name'] == 'agent':
+                        reward += e['z'] / 2
             if u'LineOfSight' in observations:
                 los = observations[u'LineOfSight']
                 if los["type"] == "Pig":
@@ -170,15 +184,17 @@ class Lumberjack(gym.Env):
         self.obs, pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += pixels * 10
+        reward += min([1.5 ** pixels, 200])
+
         self.episode_return += reward
+        print(reward)
         # Get Reward
         return self.obs, reward, done, dict()
 
     def init_malmo(self):
         print("doing init malmo")
         #Record Mission 
-        my_mission = MalmoPython.MissionSpec(getXML(n_pigs=1, obstacles=False, missiontype='kill'), True)
+        my_mission = MalmoPython.MissionSpec(getXML(), True)
         my_mission_record = MalmoPython.MissionRecordSpec()
         # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
@@ -188,7 +204,7 @@ class Lumberjack(gym.Env):
         max_retries = 5
         my_clients = MalmoPython.ClientPool()
         my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
-        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
+        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
         # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
         # Attempt to start a mission:
         print("attempting to start a mission")
@@ -237,6 +253,8 @@ class Lumberjack(gym.Env):
         """
         box = np.ones(10) / 10
         returns_smooth = np.convolve(self.returns, box, mode='same')
+        times_smooth = np.convolve(self.returns, box, mode='same')
+
         plt.clf()
         plt.plot(self.steps, returns_smooth)
         plt.title('Reach the tree')
@@ -249,7 +267,7 @@ class Lumberjack(gym.Env):
         with open(f'returns{s}.txt', 'w') as f:
             for value in self.returns:
                 f.write("{}\n".format(value)) 
-        plt.plot(range(len(self.times)), self.times)
+        plt.plot(range(len(times_smooth)), times_smooth)
         plt.savefig(f'times{s}.png')
 
 
@@ -323,8 +341,8 @@ if __name__ == '__main__':
         # Training batch size, if applicable. Should be >= rollout_fragment_length.
         # Samples batches will be concatenated together to a batch of this size,
         # which is then passed to SGD.
-        "train_batch_size": 256,
-        "gamma": 0.999,
+        "train_batch_size": 128,
+        "gamma": 0.9,
         # Whether to clip rewards during Policy's postprocessing.
         # None (default): Clip for Atari only (r=sign(r)).
         # True: r=sign(r): Fixed rewards -1.0, 1.0, or 0.0.
@@ -348,7 +366,7 @@ if __name__ == '__main__':
         },
         "preprocessor_pref": "deepmind",
         # The default learning rate.
-        "lr": 0.01,
+        "lr": 0.001,
         # "callbacks": {#"on_episode_start": on_episode_start, 
         #                             #"on_episode_step": on_episode_step, 
         #                             #"on_episode_end": on_episode_end, 
@@ -359,6 +377,7 @@ if __name__ == '__main__':
         "model": {
             "custom_model": "my_model",
             # "dim": 84, 
+            "fcnet_hiddens": [256]
             # # Used to be 42, 42 to get it to the right shape
             # "conv_filters": [[16, [4, 4], 2], 
             #                  [32, [16, 16], 2], 
@@ -401,7 +420,7 @@ if __name__ == '__main__':
     if LOAD:
         # this is the checkpoint from something trained in a small environment with a single pig
         # trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
-        trainer.restore(r"C:\Users\Kevin\ray_results\PPO_Lumberjack_2020-12-19_17-30-058xchsw75\checkpoint_202\check")
+        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\2openworld_pixel_1pig\checkpoint_403\check")
     for i in range(1000):
         # Perform one iteration of training the policy with PPO
         result = trainer.train()

@@ -18,7 +18,7 @@ def drawTree(coord):
     # tree+=CUBOID(x-2, x+2, height-1, height, z-2, z+2, "leaves")
     for y in range(height):
         #tree+=BLOCK(x, y+2, z, "log")
-        tree+=CUBOID(x, x, 2, 4, z, z, "log")
+        tree+=CUBOID(x, x, 2, 3, z, z, "log")
     return tree
 
 
@@ -55,12 +55,8 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
     if missiontype == "kill":
         quit_criteria = '''
             <RewardForMissionEnd rewardForDeath="-5000">
-                <Reward description="killed" reward="100" />
-                <Reward description="out_of_time" reward="-10000" />
+                <Reward description="out_of_time" reward="-1000" />
             </RewardForMissionEnd>
-            <AgentQuitFromCollectingItem>
-                <Item type="porkchop" description="killed"/>
-            </AgentQuitFromCollectingItem>
             <AgentQuitFromTimeUp timeLimitMs="40000" description="out_of_time"/>
             '''
         inventory = '''
@@ -71,9 +67,9 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
     else: # if missiontype == "punch"
         quit_criteria = '''
             <RewardForMissionEnd rewardForDeath="-5000">
-                <Reward description="out_of_time" reward="00" />
+                <Reward description="out_of_time" reward="-1000" />
             </RewardForMissionEnd>
-            <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
+            <AgentQuitFromTimeUp timeLimitMs="60000" description="out_of_time"/>
         '''
 
     out = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
@@ -98,7 +94,7 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             "".join(drawTree(getCoord(blocklist)) for coord in range(4) if obstacles) + \
                             "".join(drawPlus(getCoord(blocklist)) for coord in range(4) if obstacles) + \
-                            "".join(drawLava(getCoord(blocklist)) for coord in range(4) if obstacles) + \
+                            "".join(drawLava(getCoord(blocklist)) for coord in range(10) if obstacles) + \
                             "".join(drawPig(getCoord(pig_blocklist)) for coord in range(n_pigs)) + \
                             '''
                         </DrawingDecorator>
@@ -128,7 +124,7 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
                             <Height>1200</Height>
                         </ColourMapProducer>
                         <RewardForDamagingEntity>
-                            <Mob type="Pig" reward="300"/>
+                            <Mob type="Pig" reward="1000"/>
                         </RewardForDamagingEntity>''' + \
                         quit_criteria + \
                         '''

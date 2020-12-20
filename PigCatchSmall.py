@@ -2,35 +2,59 @@ from numpy.random import randint
 
 BLOCK = lambda x, y, z, t: "<DrawBlock x='{}'  y='{}' z='{}' type='{}' />".format(x, y, z, t)
 CUBOID = lambda x1, x2, y1, y2, z1, z2, t:"<DrawCuboid x1='{}' x2='{}' y1='{}' y2='{}' z1='{}' z2='{}' type='{}'/>".format(x1, x2, y1, y2, z1, z2, t)
-
-def drawTree(coord):
-    x, z = coord
-    tree = ""
-    height = 5
-    # tree+=CUBOID(x-1, x+1, height+1, height+1, z-1, z+1, "leaves")
-    # tree+=CUBOID(x-2, x+2, height-1, height, z-2, z+2, "leaves")
-    for y in range(height):
-        #tree+=BLOCK(x, y+2, z, "log")
-        tree+=CUBOID(x-1, x+1, 2, 5, z-1, z+1, "log")
-    return tree
-
-def createMarker(index, coord):
-    return '<Marker name="Tree' + str(index) + '" x="'+str(coord[0])+'" y="0" z="'+str(coord[1])+'"/>'
-
 def getTree(blocklist, SIZE):
     treePos = [randint(-SIZE, SIZE) for i in range(2)]
     while treePos in blocklist:
         treePos  = [randint(-SIZE, SIZE) for i in range(2)]
     return treePos
 
+SIZEX = 2
+SIZEZ = 9
+
+def drawTree(x, z):
+    return CUBOID(x, x, 2, 2, z, z, "log")
+
+
+def drawLava(x, z):
+    return "<DrawBlock x='{}' y='1' z='{}' type='lava'/>".format(x, z)
+
+
+def drawObstacles():
+    out = ""
+    # for z in range(2, 7, 2):
+    #     x = randint(-SIZEX, SIZEX)
+    #     obstacle = randint(0, 2)
+    #     for i in range(2):
+    #         x = randint(-SIZEX, SIZEX)
+    #         if obstacle == 0:
+    #             out += drawLava(x, z)
+    #         else:
+    #             out += drawTree(x, z)
+    
+    lava = [(-2, 5), (0, 5), (1, 5), (3, 5)]
+    for x, z in lava:
+        out += drawLava(x, z)
+        
+    tree = [(-2, 3), (0, 3), (2, 3)]
+    for x, z in tree:
+        print(x, z)
+        out += drawTree(x, z)
+    # for z in range(2, 7, 2):
+    #     x = randint(-SIZEX, SIZEX)
+    #     obstacle = randint(0, 2)
+    #     for i in range(2):
+    #         x = randint(-SIZEX, SIZEX)
+    #         if obstacle == 0:
+    #             out += drawLava(x, z)
+    #         else:
+    #             out += drawTree(x, z)
+    return out
+
+
 def getXML():
-    startX, startZ = (1, 0)
-    blocklist = [[i, j] for i in range(startX - 1, startX + 2) for j in range(startZ - 1, startZ + 2) ]
+    startX, startZ = (0, 0)
     startX+=0.5
     startZ+=0.5
-    
-    SIZEX = 2
-    SIZEZ = 9
     return '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 <About>
@@ -48,9 +72,10 @@ def getXML():
                         <FlatWorldGenerator generatorString="3;7,2;1;"/>
                         <DrawingDecorator>''' + \
                             "<DrawCuboid x1='{}' x2='{}' y1='0' y2='10' z1='{}' z2='{}' type='air'/>".format(-100, 100, -100, 100) + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZEX, SIZEX, 0, SIZEZ) + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZEX - 1, SIZEX + 1, -1, SIZEZ + 1) + \
-                            "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZEX, SIZEX, 0, SIZEZ) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZEX - 1, SIZEX + 1, -1, SIZEZ + 1) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='2' y2='4' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZEX - 1, SIZEX + 1, -1, SIZEZ + 1) + \
+                            "<DrawCuboid x1='{}' x2='{}' y1='2' y2='4' z1='{}' z2='{}' type='air'/>".format(-SIZEX, SIZEX, 0, SIZEZ) + \
+                            drawObstacles() + \
                             '''
                             <DrawEntity x="0.5" y="2" z="9.5" type="Pig"/>
                         </DrawingDecorator>
@@ -58,10 +83,13 @@ def getXML():
                     </ServerHandlers>
                 </ServerSection>
                 <AgentSection mode="Survival">
-                    <Name>MAI Lumberjack</Name>
+                    <Name>agent</Name>
                     <AgentStart>''' + \
                         '<Placement x="{}" y="2" z="{}" pitch="30" yaw="0"/>'.format(startX, startZ) + \
                         '''
+                        <Inventory>
+                            <InventoryItem slot="0" type="diamond_axe"/>
+                        </Inventory>
                     </AgentStart>
                     <AgentHandlers>
                         <ContinuousMovementCommands>
@@ -73,15 +101,16 @@ def getXML():
                         </ContinuousMovementCommands>
                         <ObservationFromRay/>
                         <ObservationFromFullStats/>
+                        <MissionQuitCommands/>
                         <ColourMapProducer>
                             <Width>1200</Width>
                             <Height>1200</Height>
                         </ColourMapProducer>
                         <RewardForDamagingEntity>
-                            <Mob type="Pig" reward="1000"/>
+                            <Mob type="Pig" reward="300"/>
                         </RewardForDamagingEntity>
                         <RewardForMissionEnd rewardForDeath="-1">
-                            <Reward description="out_of_time" reward="00" />
+                            <Reward description="out_of_time" reward="-1000" />
                         </RewardForMissionEnd>
                         <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
                         <ObservationFromNearbyEntities>
