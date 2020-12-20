@@ -2,9 +2,13 @@ from numpy.random import randint
 
 BLOCK = lambda x, y, z, t: "<DrawBlock x='{}'  y='{}' z='{}' type='{}' />".format(x, y, z, t)
 CUBOID = lambda x1, x2, y1, y2, z1, z2, t:"<DrawCuboid x1='{}' x2='{}' y1='{}' y2='{}' z1='{}' z2='{}' type='{}'/>".format(x1, x2, y1, y2, z1, z2, t)
-SIZE = 15
+SIZE = 10
 # don't let things spawn on top of the user
-blocklist = [[i, j] for i in range(-7, 8) for j in range(-7, 8)]
+default_blocklist = [[i, j] for i in range(-7, 8) for j in range(-7, 8)]
+pig_default_blocklist = [[i, j] for i in range(-7, 8) for j in range(-7, 8)]
+blocklist = default_blocklist
+pig_blocklist = pig_default_blocklist.copy()
+
 
 def drawTree(coord):
     x, z = coord
@@ -18,11 +22,11 @@ def drawTree(coord):
     return tree
 
 
-def getCoord():
+def getCoord(bl):
     treePos = [randint(-SIZE + 1, SIZE - 1) for i in range(2)]
-    while treePos in blocklist:
+    while treePos in bl:
         treePos  = [randint(-SIZE + 1, SIZE - 1) for i in range(2)]
-    blocklist.append(treePos)
+    bl.append(treePos)
     return treePos
 
 def drawPlus(coord):
@@ -45,7 +49,7 @@ def drawLava(coord):
 
 
 def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
-    global blocklist
+    global blocklist, pig_blocklist
     startX, startZ = (0.5, 0.5)
     inventory = ''
     if missiontype == "kill":
@@ -92,10 +96,10 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZE - 1, SIZE + 1, -SIZE - 1, SIZE + 1) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            "".join(drawTree(getCoord()) for coord in range(4) if obstacles) + \
-                            "".join(drawPlus(getCoord()) for coord in range(4) if obstacles) + \
-                            "".join(drawLava(getCoord()) for coord in range(4) if obstacles) + \
-                            "".join(drawPig(getCoord()) for coord in range(n_pigs)) + \
+                            "".join(drawTree(getCoord(blocklist)) for coord in range(4) if obstacles) + \
+                            "".join(drawPlus(getCoord(blocklist)) for coord in range(4) if obstacles) + \
+                            "".join(drawLava(getCoord(blocklist)) for coord in range(4) if obstacles) + \
+                            "".join(drawPig(getCoord(pig_blocklist)) for coord in range(n_pigs)) + \
                             '''
                         </DrawingDecorator>
                         <ServerQuitWhenAnyAgentFinishes/>
@@ -124,7 +128,7 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
                             <Height>1200</Height>
                         </ColourMapProducer>
                         <RewardForDamagingEntity>
-                            <Mob type="Pig" reward="600"/>
+                            <Mob type="Pig" reward="300"/>
                         </RewardForDamagingEntity>''' + \
                         quit_criteria + \
                         '''
@@ -134,6 +138,8 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
                     </AgentHandlers>
                 </AgentSection>
             </Mission>'''
-    blocklist = [[i, j] for i in range(-7, 8) for j in range(-7, 8)]
+    blocklist = default_blocklist.copy()
+    pig_blocklist = pig_default_blocklist.copy()
+
     return out
 #                             <Block type="log" reward="10.0" behaviour="oncePerTimeSpan" cooldownInMs="0.1"/>
