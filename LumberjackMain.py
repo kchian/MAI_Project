@@ -57,7 +57,7 @@ class Lumberjack(gym.Env):
         # Rllib Parameters
         self.num_outputs = 2
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
-        self.action_space = Box(np.array([-1, -0.5]), np.array([1, 0.5]),dtype=np.float32)
+        self.action_space = Box(np.array([0, -0.5]), np.array([1, 0.5]),dtype=np.float32)
         # self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
         self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*3,), dtype=np.float32)
 
@@ -123,8 +123,9 @@ class Lumberjack(gym.Env):
         self.agent_host.sendCommand("attack 0")
         
         # negative reward for spinning
-        reward -= abs(action[0]) * 10
-        reward -= abs(action[1]) * 10
+        # reward -= abs(action[0]) * 10
+        # reward -= abs(action[1]) * 10
+        reward -= 20
         # Try upping this
         time.sleep(0.3)
         self.agent_host.sendCommand(f"move 0")
@@ -142,7 +143,7 @@ class Lumberjack(gym.Env):
                 observations = json.loads(msg)
                 if 'entities' in observations:
                     self.killed_pigs.append(sum([1 for entity in observations['entities'] if entity['name'] == 'Pig']))
-            reward += 200 - duration * 5
+            reward += 600 - duration * 15
             done = True
             time.sleep(4)
 
@@ -171,7 +172,7 @@ class Lumberjack(gym.Env):
                     duration = time.time() - self.start
                     self.times.append(duration)
                     self.killed_pigs.append(N_PIGS)
-                    reward += 200 - duration * 5
+                    reward += 600 - duration * 15
                     break
                 for e in observations['entities']:
                     if e['name'] == 'agent':
@@ -184,7 +185,7 @@ class Lumberjack(gym.Env):
         self.obs, pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += min([1.5 ** pixels, 200])
+        reward += (1 - np.exp(-pixels)) * 50
 
         self.episode_return += reward
         print(reward)
@@ -253,11 +254,11 @@ class Lumberjack(gym.Env):
         """
         box = np.ones(10) / 10
         returns_smooth = np.convolve(self.returns, box, mode='same')
-        times_smooth = np.convolve(self.returns, box, mode='same')
+        times_smooth = np.convolve(self.times, box, mode='same')
 
         plt.clf()
         plt.plot(self.steps, returns_smooth)
-        plt.title('Reach the tree')
+        plt.title('2 layer')
         plt.ylabel('Return')
         plt.xlabel('Steps')
         s = time.time()
@@ -320,7 +321,7 @@ if __name__ == '__main__':
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 1,            # We aren't using parallelism
+        'num_workers': 2,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
         # "monitor": True,
@@ -342,7 +343,7 @@ if __name__ == '__main__':
         # Samples batches will be concatenated together to a batch of this size,
         # which is then passed to SGD.
         "train_batch_size": 128,
-        "gamma": 0.9,
+        "gamma": 0.999,
         # Whether to clip rewards during Policy's postprocessing.
         # None (default): Clip for Atari only (r=sign(r)).
         # True: r=sign(r): Fixed rewards -1.0, 1.0, or 0.0.
@@ -377,7 +378,7 @@ if __name__ == '__main__':
         "model": {
             "custom_model": "my_model",
             # "dim": 84, 
-            "fcnet_hiddens": [256]
+            "fcnet_hiddens": [800]
             # # Used to be 42, 42 to get it to the right shape
             # "conv_filters": [[16, [4, 4], 2], 
             #                  [32, [16, 16], 2], 

@@ -109,7 +109,7 @@ def getXML():
                         <RewardForDamagingEntity>
                             <Mob type="Pig" reward="300"/>
                         </RewardForDamagingEntity>
-                        <RewardForMissionEnd rewardForDeath="-1">
+                        <RewardForMissionEnd rewardForDeath="-300">
                             <Reward description="out_of_time" reward="-1000" />
                         </RewardForMissionEnd>
                         <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
