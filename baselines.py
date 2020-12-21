@@ -48,7 +48,6 @@ def main(agent_host, action_method):
     killed = []
     drawer = draw_helper()
     
-    
     stats = {
         'success': [],
         'timeout': [],

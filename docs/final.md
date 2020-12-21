@@ -42,8 +42,10 @@ The one which uses the naive approach works well with no obstacles, seeking and 
 
 ![environment](images/baseline.gif)  
 
-#### Simplified approach
+#### Colormap Introduction
 The approach our project takes is that of an agent which uses Malmo's Colormap Video frames to move and turn through the environment. Colormap video frames is a video frame which has blocks and entities colored uniformly in unique colors to simplify vision tasks. When considering the real world, it is akin to having an object detection/classification system to operate on image data before using it as input.
+
+Though this simplifies the problem and the observation space, use of continuous movement by the agent means that there are still a massive number of possible observations, especially considering noise such as pigs hurting, crosshair highlighting, and lava sparks.
 
 <img src="images/colormap.png" width="500">  
 
@@ -55,7 +57,7 @@ The approach our project takes is that of an agent which uses Malmo's Colormap V
 
 The neural network has two hidden layers of 256 nodes each, using a hyperbolic tangent (tanh) activation function. It also has a value function which mirrors the primary neural network architecture.
 
-The algorithm was trained on an environment with obstacles of lava and logs in fixed positions to learn about the hazards and how to avoid them. The goal, as with the evaluation, was to attack and kill the pig. It was trained for approximately 3 hours and 280 epochs. 
+The algorithm was trained on an environment with obstacles of lava and logs in fixed positions to learn about the hazards and how to avoid them. The goal, as with the evaluation, was to attack and kill the pig. It was trained for approximately 3 hours and 280 epochs on one environment, and another 2 hours on a different one. 
 
 Since the agent is trained on a fixed environment with no randomness, it is possible to overfit the example environment. For example, if the agent learns that it can avoid logs by moving around it to the left, but there is eventually a log next to the wall, the agent would fail to recognize that it cannot avoid the obstacle by avoiding it to the left. This can be overcome to some extent by further honing the training environment, or augmenting a previously-trained model with a new environment.
 
@@ -108,13 +110,14 @@ claim you have. Use plots, charts, tables, screenshots, figures, etc. as needed.
 a few paragraphs to describe each type of evaluation that you perform. 
 -->
 Evaluation was performed by qualitatively and quantitatively by applying trained models in different environments. These environments were:
- * A 5x9 obstacle course
+ * An open world environment
+    * Pigs and obstacles are spawned in at random in a 20x20 grid.
+ * A 5x9 obstacle course to be completed in a maximum of 30 seconds
     * Player and pig spawn at far ends of the rectangle
     * 3 rows of hazards (blocks or lava) are randomly generated and placed between them
         * Rows have at most 3 / 5 blocks filled with hazards
         * Hazard rows are separated by a row of normal dirt blocks
- * An open world environment
-    * Pigs and obstacles are spawned in at random in a 20x20 grid.
+
 
 The quantitative measurements we used in evaluation were
  * How long it took to kill a pig (Mission duration)
@@ -123,6 +126,27 @@ The quantitative measurements we used in evaluation were
 ### Obstacle Course Environment
 <img src="images/test_env.png" width="500">  
 
+The baselines and our proposed PPO AI were set to perform the "obstacle course" to kill the pig. Keep in mind that the pig, after hit once, panics and moves sporadically through the course, introducing a lot of randomness. Since the obstacles are also in randomized positions through runs, one can consider this a fairly general experiment. 
+
+Random Baseline: 
+
+![Random baseline results](images/random_pie.png)  
+
+These results are for the agent which moves forward and turns randomly. Each trial's outcome was noted as success (killing the pig), timeout (using up the allotted 30 seconds), or death. In 50 runs only two were successful, establishing a minimum value for successes. Of the other runs, 19 were timeouts and a whopping 29 were deaths by meandering into either lava or the fire which has a chance to randomly spring up.
+
+![Random baseline results](images/random_box.png)  
+
+Here is plotted the time it took to reach each outcome. For example, since timing out took 30 seconds, the complete box plot of timing out is slightly above 30. Both of the successes for this random baseline were in the high 20s, implying that the randomized baseline is, as expected, not taking a very direct path towards the pig. On the other hand, the time it took to die is fairly well distributed throughout the time, also to be expected of random wandering.
+
+
+AI vs Seeking baseline: 
+
+![AI results](images/ai_pie.png)![seek results](images/seek_pie.png)    
+
+Now that the graph format has been introduced and the baseline established, we can compare the AI and the naive seeking baseline. In these pie charts, we can see that the AI has over double the success rate of the seeking baseline, and dies about a third less often. These are very reasonable results for an AI facing a random set of obstacles, an almost infinitely large observation space, and random pig movement.
+
+![Success comparison](images/compare_success.png)  
+This graph is slightly different than that of the randomized baseline: comparing instead of holistically visualizing times to reach states. Here, you can see that the AI is finding and killing the pig not just more consistently, but also significantly faster than the seeking baseline. This is in spite of the seeking baseline attempting to follow a direct path to the pig. Concretely, the average time to success of the AI was 7.65 seconds, while the average time for the seeking baseline is 14.53 seconds. Our AI is not just more consistent, but also quicker than our baselines.
 
 
 

@@ -23,7 +23,7 @@ from ray.rllib.agents import ppo
 from ray.rllib.models import ModelCatalog
 from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 #-----------------------
-from PigCatchSmall import getXML
+from PigCatchOpen import getXML
 from LumberjackQNet import VisionNetwork
 from CustomVision import CustomVisionNetwork
 from FCNet import FCNet
@@ -154,7 +154,7 @@ class Lumberjack(gym.Env):
                 msg = o.text
                 observations = json.loads(msg)
                 if 'entities' in observations:
-                    self.killed_pigs.append(sum([1 for entity in observations['entities'] if entity['name'] == 'Pig']))
+                    self.killed_pigs.append(N_PIGS - sum([1 for entity in observations['entities'] if entity['name'] == 'Pig']))
             reward += 600 - duration * 15
             done = True
             time.sleep(4)
@@ -205,7 +205,7 @@ class Lumberjack(gym.Env):
     def init_malmo(self):
         print("doing init malmo")
         #Record Mission 
-        my_mission = MalmoPython.MissionSpec(getXML(), True)
+        my_mission = MalmoPython.MissionSpec(getXML(n_pigs=N_PIGS, obstacles=True, missiontype='kill'), True)
         my_mission_record = MalmoPython.MissionRecordSpec()
         # my_mission_record.setDestination(os.path.sep.join([os.getcwd(), 'recording' + str(int(time.time())) + '.tgz']))
         # my_mission_record.recordMP4(MalmoPython.FrameType.COLOUR_MAP, 24, 2000000, False)
@@ -427,3 +427,4 @@ if __name__ == '__main__':
                 episode_reward += reward
         print(f"stats:{env.stats}")
         print(f"times:{env.times}")
+        print(f"killed:{env.killed_pigs}")
