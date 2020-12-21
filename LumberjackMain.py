@@ -23,13 +23,7 @@ from ray.rllib.agents import ppo
 from ray.rllib.models import ModelCatalog
 from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 #-----------------------
-<<<<<<< HEAD
-# from PigCatchOpen import getXML
 from PigCatchSmall import getXML
-
-=======
-from PigCatchSmall import getXML
->>>>>>> main
 from LumberjackQNet import VisionNetwork
 from CustomVision import CustomVisionNetwork
 from FCNet import FCNet
@@ -38,16 +32,11 @@ from FrameProcessor import draw_helper
 
 LOAD = False
 WIDTH, HEIGHT = (20, 20)
-<<<<<<< HEAD
 COLORS = {(0, 93, 162): 0, # wood
             (46, 70, 139): 1, # grass
             (1, 57, 110): 2, # pig
             (139, 23, 23): 3, # diamond
             (185, 185, 70): 4} # lava
-=======
-pig_color = np.array([1, 57, 110])
-N_PIGS = 5
->>>>>>> main
 
 def binary_conv_obs(obs):
     out = np.zeros((WIDTH, HEIGHT))
@@ -66,16 +55,17 @@ class Lumberjack(gym.Env):
         self.drawer = draw_helper()
         self.log_frequency = 10
         self.action_dict = {
-            0: 'move',  # Move forward
-            1: 'turn', 
+            0: 'move 1',  # Move forward
+            1: 'turn 1', 
+            2: 'turn -1', 
         }
 
         # Rllib Parameters
         self.num_outputs = 2
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
-        self.action_space = Box(np.array([0, -0.5]), np.array([1, 0.5]),dtype=np.float32)
+        self.action_space = Discrete(3)
         # self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
-        self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*1,), dtype=np.float32)
+        self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*3,), dtype=np.float32)
 
         # Malmo Parameters
         self.agent_host = MalmoPython.AgentHost()
@@ -134,16 +124,15 @@ class Lumberjack(gym.Env):
         # Get Action
         reward = 0
         print(action)
-        self.agent_host.sendCommand(f"move {(action[0]):30.1f}")
-        self.agent_host.sendCommand(f"turn {(action[1]):30.1f}")
-        self.agent_host.sendCommand("attack 0")
+        command = self.action_dict[action]
+        self.agent_host.sendCommand(command)
+        time.sleep(.1)
         
         # negative reward for spinning
         # reward -= abs(action[0]) * 10
         # reward -= abs(action[1]) * 10
         reward -= 20
         # Try upping this
-        time.sleep(0.3)
         self.agent_host.sendCommand(f"move 0")
         self.agent_host.sendCommand(f"turn 0")
         self.episode_step += 1
@@ -187,7 +176,7 @@ class Lumberjack(gym.Env):
                     time.sleep(4)
                     duration = time.time() - self.start
                     self.times.append(duration)
-                    self.killed_pigs.append(N_PIGS)
+                    self.killed_pigs.append(1)
                     reward += 600 - duration * 15
                     break
                 for e in observations['entities']:
@@ -198,10 +187,11 @@ class Lumberjack(gym.Env):
                 if los["type"] == "Pig":
                     self.agent_host.sendCommand("attack 1")
                     self.agent_host.sendCommand("attack 0")
+                    time.sleep(0.1)
         self.obs, pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += (1 - np.exp(-pixels)) * 50
+        reward += (1 - np.exp(-pixels)) * 20
 
         self.episode_return += reward
         print(reward)
@@ -222,8 +212,8 @@ class Lumberjack(gym.Env):
         max_retries = 5
         my_clients = MalmoPython.ClientPool()
         # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
-        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
-        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
+        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
+        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
         # Attempt to start a mission:
         print("attempting to start a mission")
         for retry in range(max_retries):
@@ -246,7 +236,7 @@ class Lumberjack(gym.Env):
         return world_state
 
     def get_observation(self, world_state):
-        obs = np.zeros((WIDTH, HEIGHT, 1))
+        obs = np.zeros((WIDTH, HEIGHT, 3))
         if world_state.is_mission_running:
             if len(world_state.errors) > 0:
                 raise AssertionError('Could not load grid.')
@@ -256,8 +246,9 @@ class Lumberjack(gym.Env):
                         pig_pixels, obs = self.drawer.showFrame(frame)
                         # pixels = frame.pixels
                         # scale to between -1, 1
-                        obs = binary_conv_obs(obs)
-                        obs = obs / (5 / 2) - 1
+                        obs = obs / (255 / 2) - 1
+                        # obs = binary_conv_obs(obs)
+                        # obs = obs / (5 / 2) - 1
                         return obs.flatten(), pig_pixels
         return obs.flatten(), 0
     
@@ -276,7 +267,7 @@ class Lumberjack(gym.Env):
 
         plt.clf()
         plt.plot(self.steps, returns_smooth)
-        plt.title('With obstacles discrete')
+        plt.title('With obstacles discrete movements')
         plt.ylabel('Return')
         plt.xlabel('Steps')
         s = time.time()
@@ -337,7 +328,7 @@ if __name__ == '__main__':
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 2,            # We aren't using parallelism
+        'num_workers': 1,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
         # "monitor": True,

@@ -77,6 +77,10 @@ def getXML():
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='4' z1='{}' z2='{}' type='air'/>".format(-SIZEX, SIZEX, 0, SIZEZ) + \
                             drawObstacles() + \
                             '''
+                            <DrawCuboid x1='-1' x2='1' y1='2' y2='2' z1='8' z2='9' type='fence'/>
+                            <DrawCuboid x1='0' x2='0' y1='2' y2='2' z1='9' z2='9' type='air'/>
+                            <DrawCuboid x1='-1' x2='-1' y1='2' y2='2' z1='8' z2='8' type='air'/>
+                            <DrawCuboid x1='1' x2='1' y1='2' y2='2' z1='8' z2='8' type='air'/>
                             <DrawEntity x="0.5" y="2" z="9.5" type="Pig"/>
                         </DrawingDecorator>
                         <ServerQuitWhenAnyAgentFinishes/>
@@ -92,17 +96,10 @@ def getXML():
                         </Inventory>
                     </AgentStart>
                     <AgentHandlers>
-                        <ContinuousMovementCommands>
-                            <ModifierList type="allow-list">
-                                <command>move</command>
-                                <command>turn</command>
-                                <command>attack</command>
-                            </ModifierList>
-                        </ContinuousMovementCommands>
+                        <DiscreteMovementCommands/>
                         <MissionQuitCommands/>
                         <ObservationFromRay/>
                         <ObservationFromFullStats/>
-                        <MissionQuitCommands/>
                         <ColourMapProducer>
                             <Width>1200</Width>
                             <Height>1200</Height>
