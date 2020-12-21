@@ -19,7 +19,7 @@ The goal of our project was the creation of an agent which could find and catch 
 
 ![environment](images/environment.png)  
 
-When in uncluttered environments, the problem is fairly simple to solve: a perfect agent in this case would turn to locate a pig and walk straight towards it. Once lava, trees, and blocks are introduced, it becomes difficult for simpler agents to manage unexpected obstacle arrangements. This project also has myriad applications in ongoing areas of research, such as how to train search and rescue robots to navigate rubble after natural disasters or self-driving car obstacle avoidance. Though this application is simpler and virtual, removing some variables, it is clear that problems such as these require more than naive implementations of path-finding algorithms. In our problem setup, we are careful to not give our AI more than a realistic agent might get - no descriptions of specific obstacles or how/where they appear.
+When in uncluttered environments, the problem is fairly simple to solve: a perfect agent in this case would turn to locate a pig and walk straight towards it. Once lava, trees, and blocks are introduced, it becomes difficult for simpler agents to manage unexpected obstacle arrangements. This project also has myriad parallels in ongoing areas of research, such as how to train search and rescue robots to navigate rubble after natural disasters or self-driving car obstacle avoidance. Though this application is simpler and virtual, removing some variables, it is clear that problems such as these require more than naive implementations of path-finding algorithms. In our problem setup, we are careful to not give our AI more than a realistic agent might get - no descriptions of specific obstacles or how/where they appear.
 
 
 
@@ -41,24 +41,46 @@ Our project evaluates the performance of two baselines: one which moves randomly
 Continue evaluating with more data
 -->
 
-### Proposed Solutions
+### Proposed Solution
 #### Raw Pixel Data
-The approach our project takes is that of an agent which uses Malmo's Colormap Video frames to move and turn through the environment. This is meant to emulate simplfied camera data in a real robotic agent trying to overcome obstacles to get to a goal. 
+The approach our project takes is that of an agent which uses Malmo's Colormap Video frames to move and turn through the environment. This is meant to emulate simplfied camera data in a real robotic agent trying to overcome obstacles to get to a goal. Concretely, we use a PPO (Proximal Policy Optimization) Reinforcement Learning Algorithm with a fully connected neural network function approximator. The input is a 20x20x3 RGB image which is flattened before being input to the neural network. 
+
+The neural network has two hidden layers of 256 nodes each, using a hyperbolic tangent (tanh) activation function. It also has a value function which mirrors the primary neural network architecture.
+
+PPO Algorithm (Schuman et al.):
+```
+for each iteration:
+    Run old policy based on theta_old in environment for T timesteps
+    Compute advantage estimates A_hat_1 ... A_hat_t
+    Optimize surrogate loss with respect to theta for each epoch and minibatch
+    Update theta_old with a new theta
+```
 
 Rewards:
  <!-- * -1 * (Movement speed [-1, 1]) * 5
  * -1 * (Turn speed [-0.5, 0.5]) * 20 -->
  * -20 per time step
  * (1 - np.exp(- # of pig_pixels)) * 30
- * +600 for hitting the pig
- * -300 for dying
+ * +600 for each time the agent damages the pig
+ * -1000 for dying
  * -1000 for running out of time
+ * reward -= 3 * (count of steps) for staying in an already visited block
+ * reward += 50 for visiting a previously unseen block
  * 600 - duration * 15
 
 Action Space:
- * [-1, 1] movement speed
+ * [0, 0.75] movement speed
  * [-0.5, 0.5] turn speed
 
+<!-- #### Raw Pixel Data + Strafe Action Space
+This is a slightly modified agent with the ability to move laterally without shifting the field of view. The previous agent has a simplified action space, in order to "move left" one would first have to "turn left" then "move forward" instead of being able to "move left" while still facing forward.
+
+Rewards: Same as above
+
+Action Space:
+ * [0, 0.75] movement speed
+ * [-0.5, 0.5] turn speed
+ * [-1, 1] strafe speed -->
 
 #### Simplified approach
 The approach our project takes is that of an agent which uses Malmo's Colormap Video frames to move and turn through the environment. Colormap video frames is a video frame which has blocks and entities colored uniformly in unique colors to simplify vision tasks. When considering the real world, it is akin to having an object detection/classification system to operate on image data before using it as input.
@@ -76,6 +98,7 @@ During some parts of development, particularly designing reward functions, learn
  * [Robotic Search & Rescue via Online Multi-task Reinforcement Learning](https://arxiv.org/abs/1511.08967)  
  * [Reinforcement learning in robotics: A survey](https://journals.sagepub.com/doi/full/10.1177/0278364913495721)  
 as well as a couple other less applicable papers.
+ * [PPO OpenAI paper (‎Schulman et al.)](https://arxiv.org/pdf/1707.06347.pdf)
 
 In development, we used 
  * [Malmo XML Documentation](https://microsoft.github.io/malmo/0.30.0/Schemas/MissionHandlers.html)
@@ -88,6 +111,12 @@ In development, we used
     - In particular
     - [Custom Models](https://docs.ray.io/en/stable/rllib-models.html#custom-models-pytorch)
     - [Visionnet.py](https://github.com/ray-project/ray/blob/master/rllib/models/torch/visionnet.py)
- * [PPO RL medium article](https://medium.com/aureliantactics/ppo-hyperparameters-and-ranges-6fc2d29bccbe)
+ * [PPO Hyperparameter RL medium article](https://medium.com/aureliantactics/ppo-hyperparameters-and-ranges-6fc2d29bccbe)
+ * [PPO explained](https://jonathan-hui.medium.com/rl-proximal-policy-optimization-ppo-explained-77f014ec3f12)
  * [RL Function approximation article](https://towardsdatascience.com/function-approximation-in-reinforcement-learning-85a4864d566)
  * And of course, class examples for RLLib with Malmo
+
+# Contributions
+Kevin - Everything  
+Luke - He tried  
+Chris - :(  
