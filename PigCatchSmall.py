@@ -31,31 +31,30 @@ def drawObstacles():
     #         else:
     #             out += drawTree(x, z)
     
-    # lava = [(-2, 5), (0, 5), (1, 5), (3, 5)]
-    # lava = [(-2, 3), (0, 3), (1, 3), (3, 3)]
-    # for x, z in lava:
-    #     out += drawLava(x, z)
+    #lava = [(-2, 5), (0, 5), (1, 5), (3, 5)]
+    lava = [(-2, 6), (0, 6), (2, 6)]
+    for x, z in lava:
+        out += drawLava(x, z)
         
-    # # tree = [(-2, 3), (0, 3), (2, 3)]
-    # tree = [(-2, 5), (0, 5), (2, 5)]
-    # for x, z in tree:
-    #     print(x, z)
-    #     out += drawTree(x, z)
-    for z in range(2, 7, 2):
-        x = randint(-SIZEX, SIZEX)
-        obstacle = randint(0, 2)
-        for i in range(2):
-            x = randint(-SIZEX, SIZEX)
-            if obstacle == 0:
-                out += drawLava(x, z)
-                out += drawLava(x + 1, z)
-            else:
-                out += drawTree(x, z)
-                out += drawTree(x + 1, z)
+    # tree = [(-2, 3), (0, 3), (2, 3)]
+    tree = [(-2, 3), (-1, 3),  (2, 3)]
+    for x, z in tree:
+        out += drawTree(x, z)
+    # for z in range(2, 7, 2):
+    #     x = randint(-SIZEX, SIZEX)
+    #     obstacle = randint(0, 2)
+    #     for i in range(randint(2,3)):
+    #         x = randint(-SIZEX, SIZEX)
+    #         if obstacle == 0:
+    #             out += drawLava(x, z)
+    #             # out += drawLava(x + 1, z)
+    #         else:
+    #             out += drawTree(x, z)
+    #             # out += drawTree(x + 1, z)
     return out
 
 
-def getXML():
+def getXML(obstacles = True):
     startX, startZ = (0, 0)
     startX+=0.5
     startZ+=0.5
@@ -79,7 +78,7 @@ def getXML():
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZEX - 1, SIZEX + 1, -1, SIZEZ + 1) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='4' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZEX - 1, SIZEX + 1, -1, SIZEZ + 1) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='4' z1='{}' z2='{}' type='air'/>".format(-SIZEX, SIZEX, 0, SIZEZ) + \
-                            drawObstacles() + \
+                            (drawObstacles() if obstacles else "") + \
                             '''
                             <DrawEntity x="0.5" y="2" z="9.5" type="Pig"/>
                         </DrawingDecorator>
@@ -113,7 +112,7 @@ def getXML():
                         <RewardForDamagingEntity>
                             <Mob type="Pig" reward="600"/>
                         </RewardForDamagingEntity>
-                        <RewardForMissionEnd rewardForDeath="-300">
+                        <RewardForMissionEnd rewardForDeath="-1000">
                             <Reward description="out_of_time" reward="-1000" />
                         </RewardForMissionEnd>
                         <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>

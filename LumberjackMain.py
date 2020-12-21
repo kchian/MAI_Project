@@ -58,10 +58,9 @@ class Lumberjack(gym.Env):
         # Rllib Parameters
         self.num_outputs = 2
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
-        self.action_space = Box(np.array([0, -0.5]), np.array([1, 0.5]),dtype=np.float32)
+        self.action_space = Box(np.array([0, -0.5]), np.array([0.75, 0.5]),dtype=np.float32)
         # self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
         self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*3,), dtype=np.float32)
-
 
         # Malmo Parameters
         self.agent_host = MalmoPython.AgentHost()
@@ -74,6 +73,8 @@ class Lumberjack(gym.Env):
         self.steps = []
         self.times = []
         self.killed_pigs = []
+        self.seen = {}
+        
 
     def reset(self):
         """
@@ -92,6 +93,7 @@ class Lumberjack(gym.Env):
         self.episode_return = 0
         self.episode_step = 0
         self.start = time.time()
+        self.seen = {}
         
         # Log
         if len(self.returns) > self.log_frequency and \
@@ -128,7 +130,7 @@ class Lumberjack(gym.Env):
         # reward -= abs(action[1]) * 10
         reward -= 20
         # Try upping this
-        time.sleep(0.3)
+        time.sleep(0.2)
         self.agent_host.sendCommand(f"move 0")
         self.agent_host.sendCommand(f"turn 0")
         self.episode_step += 1
@@ -169,6 +171,12 @@ class Lumberjack(gym.Env):
                     break
                 for e in observations['entities']:
                     if e['name'] == 'agent':
+                        coords = (np.floor(e['x']), np.floor(e['z']))
+                        if coords not in self.seen:
+                            self.seen[coords] = 0
+                            reward += 50
+                        self.seen[coords] += 3
+                        reward -= self.seen[coords]
                         reward += e['z'] / 2
             if u'LineOfSight' in observations:
                 los = observations[u'LineOfSight']
@@ -386,7 +394,7 @@ if __name__ == '__main__':
     if LOAD:
         # this is the checkpoint from something trained in a small environment with a single pig
         # trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
-        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\small_set_obstacles\checkpoint_451\check")
+        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\small_set_obstacles\best\checkpoint_281\check")
     if TRAIN:
         for i in range(1000):
             # Perform one iteration of training the policy with PPO

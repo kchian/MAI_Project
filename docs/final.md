@@ -15,11 +15,11 @@ particular, make sure that the problem is clearly defined here, and feel free to
 the task. Part of the evaluation will be on how well you are able to motivate the challenges of the problem,
 i.e. why is it not trivial, and why you need AI/ML algorithms to solve it
 -->
-The goal of our project was the creation of an agent which could find and catch pigs using only image input. The environment is limited to a 5x9 rectangle riddled with barriers and lava. The goal is for our agent to track and reach pigs before falling victim to traps or running out of time. The agent is measured in its reliability of killing pigs, in the time it takes to kill pigs, and the number of times it dies. Our agent automatically hits pigs within its line-of-sight to denote it reaching its goal.
+The goal of our project was the creation of an agent which could find and catch pigs using only image input. The environment is limited to a 5x9 rectangle riddled with barriers and lava. The goal is for our agent to track and reach pigs before falling victim to traps or running out of time. The agent is measured in its reliability of killing pigs, in the time it takes to kill pigs, and the number of times it dies. Agents and baselines alike automatically hit pigs within its line-of-sight with a diamond axe to denote it reaching its goal. Two swift strikes of the axe slay the (virtual) beast!
 
 ![environment](images/environment.png)  
 
-When in uncluttered environments, the problem is fairly simple to solve: a perfect agent in this case would turn to locate a pig and walk straight towards it. Once lava, trees, and blocks are introduced, it becomes difficult for simpler agents to manage unexpected obstacle arrangements. This project also has myriad parallels in ongoing areas of research, such as how to train search and rescue robots to navigate rubble after natural disasters or self-driving car obstacle avoidance. Though this application is simpler and virtual, removing some variables, it is clear that problems such as these require more than naive implementations of path-finding algorithms. In our problem setup, we are careful to not give our AI more than a realistic agent might get - no descriptions of specific obstacles or how/where they appear.
+When in uncluttered environments, the problem is fairly simple to solve: a perfect agent in this case would turn to locate a pig and walk straight towards it. Once lava, trees, and blocks are introduced, it becomes difficult for simpler agents to manage unexpected obstacle arrangements. This project also has myriad parallels in ongoing areas of research, such as how to train search and rescue robots to navigate rubble after natural disasters or self-driving car obstacle avoidance. Though this application is simpler and virtual, removing some variables, it is clear that problems such as these require more than naive implementations of path-finding algorithms. In our problem setup, we are careful to not give our AI more than a realistic agent might get - no descriptions of specific obstacles or how/where they appear. In the environment riddled with obstacles, a perfect AI would perform akin to a floodfill depth first search with a heuristic towards the pig's exact location, hit it, and track it through any of it's panicked movements.
 
 
 
@@ -36,16 +36,28 @@ and equations as much as possible.
  The crux of the project is the use of colormap video frames. These are video frames which have blocks and entities colored uniformly in unique colors to simplify vision tasks. When considering the real world, it is akin to having an object detection/classification system to operate on image data before using it as input.
 
 ### Baselines
-Our project evaluates the performance of two baselines: one which moves randomly in our environment without taking into account the observations at all, and one which uses the pig pixels' relative position on the screen to naively turn and walk towards it. 
-<!--
-Continue evaluating with more data
--->
+Our project evaluates the performance of two baselines: one which moves randomly in our environment without taking into account the observations at all, and one which uses the pig pixels' relative position on the screen to naively turn and walk towards it by centering the pig. 
+
+The one which uses the naive approach works well with no obstacles, seeking and finding the pig. 
+
+![environment](images/baseline.gif)  
+
+#### Simplified approach
+The approach our project takes is that of an agent which uses Malmo's Colormap Video frames to move and turn through the environment. Colormap video frames is a video frame which has blocks and entities colored uniformly in unique colors to simplify vision tasks. When considering the real world, it is akin to having an object detection/classification system to operate on image data before using it as input.
+
+<img src="images/colormap.png" width="500">  
+
+*Top left is what the colormap video looks like, right is the real minecraft environment. Lapis blocks are green, grass is red, and the pig is blue in the colormap video.*
 
 ### Proposed Solution
 #### Raw Pixel Data
 The approach our project takes is that of an agent which uses Malmo's Colormap Video frames to move and turn through the environment. This is meant to emulate simplfied camera data in a real robotic agent trying to overcome obstacles to get to a goal. Concretely, we use a PPO (Proximal Policy Optimization) Reinforcement Learning Algorithm with a fully connected neural network function approximator. The input is a 20x20x3 RGB image which is flattened before being input to the neural network. 
 
 The neural network has two hidden layers of 256 nodes each, using a hyperbolic tangent (tanh) activation function. It also has a value function which mirrors the primary neural network architecture.
+
+The algorithm was trained on an environment with obstacles of lava and logs in fixed positions to learn about the hazards and how to avoid them. The goal, as with the evaluation, was to attack and kill the pig. It was trained for approximately 3 hours and 280 epochs. 
+
+Since the agent is trained on a fixed environment with no randomness, it is possible to overfit the example environment. For example, if the agent learns that it can avoid logs by moving around it to the left, but there is eventually a log next to the wall, the agent would fail to recognize that it cannot avoid the obstacle by avoiding it to the left. This can be overcome to some extent by further honing the training environment, or augmenting a previously-trained model with a new environment.
 
 PPO Algorithm (Schuman et al.):
 ```
@@ -57,8 +69,10 @@ for each iteration:
 ```
 
 Rewards:
- <!-- * -1 * (Movement speed [-1, 1]) * 5
- * -1 * (Turn speed [-0.5, 0.5]) * 20 -->
+ <!-- 
+ * -1 * (Movement speed [-1, 1]) * 5
+ * -1 * (Turn speed [-0.5, 0.5]) * 20 
+ -->
  * -20 per time step
  * (1 - np.exp(- # of pig_pixels)) * 30
  * +600 for each time the agent damages the pig
@@ -82,15 +96,35 @@ Action Space:
  * [-0.5, 0.5] turn speed
  * [-1, 1] strafe speed -->
 
-#### Simplified approach
-The approach our project takes is that of an agent which uses Malmo's Colormap Video frames to move and turn through the environment. Colormap video frames is a video frame which has blocks and entities colored uniformly in unique colors to simplify vision tasks. When considering the real world, it is akin to having an object detection/classification system to operate on image data before using it as input.
-
-![colormap](images/colormap.png)  
-*Top left is what the colormap video looks like, right is the real minecraft environment. Lapis blocks are green, grass is red, and the pig is blue in the colormap video.*
 <!--
 Need to add other approach of simplified space if that works
 -->
 ## Evaluation
+<!-- 
+An important aspect of your project, as I’ve mentioned several times now, is evaluating your
+project. Be clear and precise about describing the evaluation setup, for both quantitative and qualitative
+results. Present the results to convince the reader that you have solved the problem, to whatever extent you
+claim you have. Use plots, charts, tables, screenshots, figures, etc. as needed. I expect you will need at least
+a few paragraphs to describe each type of evaluation that you perform. 
+-->
+Evaluation was performed by qualitatively and quantitatively by applying trained models in different environments. These environments were:
+ * A 5x9 obstacle course
+    * Player and pig spawn at far ends of the rectangle
+    * 3 rows of hazards (blocks or lava) are randomly generated and placed between them
+        * Rows have at most 3 / 5 blocks filled with hazards
+        * Hazard rows are separated by a row of normal dirt blocks
+ * An open world environment
+    * Pigs and obstacles are spawned in at random in a 20x20 grid.
+
+The quantitative measurements we used in evaluation were
+ * How long it took to kill a pig (Mission duration)
+ * Percentage of runs ending in death, time-out, and success
+
+### Obstacle Course Environment
+<img src="images/test_env.png" width="500">  
+
+
+
 
 ## References
 During some parts of development, particularly designing reward functions, learning rates, the network, and evaluation we used primarily:  
@@ -115,8 +149,3 @@ In development, we used
  * [PPO explained](https://jonathan-hui.medium.com/rl-proximal-policy-optimization-ppo-explained-77f014ec3f12)
  * [RL Function approximation article](https://towardsdatascience.com/function-approximation-in-reinforcement-learning-85a4864d566)
  * And of course, class examples for RLLib with Malmo
-
-# Contributions
-Kevin - Everything  
-Luke - He tried  
-Chris - :(  

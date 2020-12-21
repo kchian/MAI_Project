@@ -3,7 +3,7 @@ try:
     from malmo import MalmoPython
 except:
     import MalmoPython
-from PigCatchOpen import getXML
+from PigCatchSmall import getXML
 from FrameProcessor import draw_helper
 import os
 import sys
@@ -77,6 +77,9 @@ def main(agent_host):
                 # https://github.com/microsoft/malmo/blob/master/Malmo/samples/Python_examples/hit_test.py
                 msg = o.text
                 observations = json.loads(msg)
+                if all([entity['name'] != 'Pig' for entity in observations['entities']]):
+                    agent_host.sendCommand(f"quit")
+                    break
                 if u'LineOfSight' in observations:
                     los = observations[u'LineOfSight']
                     if los["type"] == "Pig":
@@ -90,7 +93,7 @@ def main(agent_host):
                 reward += r.getValue()
             episode_return += reward
         times.append(time.time() - start)
-
+        time.sleep(4)
 
         num_episode += 1
         returns.append(episode_return)
@@ -130,15 +133,18 @@ def calc_actions(obs):
     left_side = bin_obs[:, :WIDTH//2]
     if np.sum(right_side) > np.sum(left_side):
         actions.append("turn 0.5")
+        actions.append("move 1")
+    elif np.sum(right_side) < np.sum(left_side):
+        actions.append("turn -0.5")
+        actions.append("move 1")
     else:
         actions.append("turn -0.5")
-    actions.append("move 1")
     return actions
 
 
 def init_malmo(agent_host):
         #Record Mission 
-        my_mission = MalmoPython.MissionSpec(getXML(n_pigs=1, obstacles=False, missiontype="kill"), True)
+        my_mission = MalmoPython.MissionSpec(getXML(obstacles=False), True)
         my_mission_record = MalmoPython.MissionRecordSpec()
         my_mission.setViewpoint(0)
         max_retries = 5
