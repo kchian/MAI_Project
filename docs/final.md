@@ -46,12 +46,14 @@ Continue evaluating with more data
 The approach our project takes is that of an agent which uses Malmo's Colormap Video frames to move and turn through the environment. This is meant to emulate simplfied camera data in a real robotic agent trying to overcome obstacles to get to a goal. 
 
 Rewards:
- * -1 * (Movement speed [-1, 1]) * 5
- * -1 * (Turn speed [-0.5, 0.5]) * 20
- * min(1.5^pixels, 300)
- * +300 for hitting the pig
+ <!-- * -1 * (Movement speed [-1, 1]) * 5
+ * -1 * (Turn speed [-0.5, 0.5]) * 20 -->
+ * -20 per time step
+ * (1 - np.exp(- # of pig_pixels)) * 50
+ * +1000 for hitting the pig
+ * -300 for dying
  * -1000 for running out of time
- * -1 *(Mission duration) * 5
+ * 600 - duration * 15
 
 Action Space:
  * [-1, 1] movement speed
