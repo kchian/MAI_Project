@@ -31,10 +31,11 @@ from FCNet import FCNet
 from FrameProcessor import draw_helper
 
 LOAD = True
-TRAIN = True
+TRAIN = False
 WIDTH, HEIGHT = (20, 20)
 pig_color = np.array([1, 57, 110])
 N_PIGS = 5
+
 
 def binary_conv_obs(obs):
     out = np.zeros((WIDTH, HEIGHT))
@@ -74,7 +75,12 @@ class Lumberjack(gym.Env):
         self.times = []
         self.killed_pigs = []
         self.seen = {}
-        
+        self.stats = {
+            'success': [],
+            'timeout': [],
+            'death': [],
+        }
+
 
     def reset(self):
         """
@@ -120,7 +126,6 @@ class Lumberjack(gym.Env):
         """
         # Get Action
         reward = 0
-        print(action)
         self.agent_host.sendCommand(f"move {(action[0]):30.1f}")
         self.agent_host.sendCommand(f"turn {(action[1]):30.1f}")
         self.agent_host.sendCommand("attack 0")
@@ -140,6 +145,10 @@ class Lumberjack(gym.Env):
         done = False
         if not world_state.is_mission_running:
             duration = time.time() - self.start
+            if duration >= 30:
+                self.stats['timeout'].append(duration)
+            else:
+                self.stats['death'].append(duration)
             self.times.append(duration)
             for o in world_state.observations:
                 msg = o.text
@@ -162,9 +171,10 @@ class Lumberjack(gym.Env):
             if 'entities' in observations:
                 if all([entity['name'] != 'Pig' for entity in observations['entities']]):
                     done = True
+                    duration = time.time() - self.start
+                    self.stats['success'].append(duration)
                     self.agent_host.sendCommand(f"quit")
                     time.sleep(4)
-                    duration = time.time() - self.start
                     self.times.append(duration)
                     self.killed_pigs.append(N_PIGS)
                     reward += 600 - duration * 15
@@ -189,7 +199,6 @@ class Lumberjack(gym.Env):
         reward += (1 - np.exp(-pixels)) * 30
 
         self.episode_return += reward
-        print(reward)
         # Get Reward
         return self.obs, reward, done, dict()
 
@@ -206,7 +215,7 @@ class Lumberjack(gym.Env):
         max_retries = 5
         my_clients = MalmoPython.ClientPool()
         my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10000)) # add Minecraft machines here as available
-        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
+        # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001)) # add Minecraft machines here as available
         # my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
         # Attempt to start a mission:
         print("attempting to start a mission")
@@ -394,7 +403,7 @@ if __name__ == '__main__':
     if LOAD:
         # this is the checkpoint from something trained in a small environment with a single pig
         # trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
-        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\small_set_obstacles\best\checkpoint_281\check")
+        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\small_set_obstacles\best\checkpoint_412\check")
     if TRAIN:
         for i in range(1000):
             # Perform one iteration of training the policy with PPO
@@ -407,8 +416,7 @@ if __name__ == '__main__':
     else:
         # instantiate env class
         env = Lumberjack({})
-
-        while True:
+        for i in range(50):
             # run until episode ends
             episode_reward = 0
             done = False
@@ -417,4 +425,5 @@ if __name__ == '__main__':
                 action = trainer.compute_action(obs)
                 obs, reward, done, info = env.step(action)
                 episode_reward += reward
-            print(reward)
+        print(f"stats:{env.stats}")
+        print(f"times:{env.times}")

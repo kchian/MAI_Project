@@ -3,7 +3,9 @@ try:
     from malmo import MalmoPython
 except:
     import MalmoPython
-from PigCatchSmall import getXML
+# from PigCatchSmall import getXML
+from PigCatchOpen import getXML
+
 from FrameProcessor import draw_helper
 import os
 import sys
@@ -15,6 +17,7 @@ import numpy as np
 
 WIDTH, HEIGHT = (20, 20)
 pig_color = np.array([1, 57, 110])
+N_PIGS = 5
 
 def binary_conv_obs(obs):
     out = np.zeros((WIDTH, HEIGHT))
@@ -38,11 +41,20 @@ def get_observation(world_state, drawer):
                     return obs
     return obs
 
-def main(agent_host):
-    num_episode = 10
+def main(agent_host, action_method):
+    num_episode = 50
     returns = []
     times = []
+    killed = []
     drawer = draw_helper()
+    
+    
+    stats = {
+        'success': [],
+        'timeout': [],
+        'death': [],
+    }
+    is_successful = False
 
     for i in range(num_episode):
         # Setup Malmo
@@ -55,7 +67,7 @@ def main(agent_host):
                 print("\nError:",error.text)
         obs = get_observation(world_state, drawer)
         episode_return = 0
-        next_actions = calc_actions(obs)
+        next_actions = action_method(obs)
         start = time.time()
         # Run episode
         while world_state.is_mission_running:
@@ -72,13 +84,18 @@ def main(agent_host):
             for error in world_state.errors:
                 print("Error:", error.text)
             obs = get_observation(world_state, drawer)
-            next_actions = calc_actions(obs)
+            next_actions = action_method(obs)
             for o in world_state.observations:
                 # https://github.com/microsoft/malmo/blob/master/Malmo/samples/Python_examples/hit_test.py
                 msg = o.text
                 observations = json.loads(msg)
                 if all([entity['name'] != 'Pig' for entity in observations['entities']]):
+                    duration = time.time() - start
+                    if not is_successful:
+                        stats['success'].append(duration)
+                    is_successful = True
                     agent_host.sendCommand(f"quit")
+                    time.sleep(4)
                     break
                 if u'LineOfSight' in observations:
                     los = observations[u'LineOfSight']
@@ -92,14 +109,29 @@ def main(agent_host):
             for r in world_state.rewards:
                 reward += r.getValue()
             episode_return += reward
-        times.append(time.time() - start)
-        time.sleep(4)
+        duration = time.time() - start
+        times.append(duration)
+        for o in world_state.observations:
+                # https://github.com/microsoft/malmo/blob/master/Malmo/samples/Python_examples/hit_test.py
+                msg = o.text
+                observations = json.loads(msg)
+                killed.append(N_PIGS - sum([1 if entity['name'] == 'Pig' else 0 for entity in observations['entities']]))
+        if not is_successful:
+            if duration >= 30:
+                stats['timeout'].append(duration)
+            else:
+                stats['death'].append(duration)
+            time.sleep(4)
+        is_successful = False
 
         num_episode += 1
         returns.append(episode_return)
-
-    print(times)
     # log_returns(returns)
+    print(f"stats = {stats}")
+    print(f"killed = {killed}")
+    
+
+    print()
 
 
 def log_returns(returns):
@@ -124,7 +156,14 @@ def log_returns(returns):
         for value in returns:
             f.write("{}\n".format(value)) 
 
-def calc_actions(obs):
+def calc_actions_random(obs):
+    actions = []
+    actions.append(f"turn {random.random()}")
+    actions.append(f"move {abs(random.random())}")
+    return actions
+
+
+def calc_actions_seek(obs):
     actions = []
     bin_obs = binary_conv_obs(obs)
     # plt.imshow(bin_obs)
@@ -141,29 +180,29 @@ def calc_actions(obs):
         actions.append("turn -0.5")
     return actions
 
-
 def init_malmo(agent_host):
-        #Record Mission 
-        my_mission = MalmoPython.MissionSpec(getXML(obstacles=False), True)
-        my_mission_record = MalmoPython.MissionRecordSpec()
-        my_mission.setViewpoint(0)
-        max_retries = 5
-        my_clients = MalmoPython.ClientPool()
-        my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10001))
-        for retry in range(max_retries):
-            try:
-                agent_host.startMission( my_mission, my_clients, my_mission_record, 0, 'baseline_seek')
-                break
-            except RuntimeError as e:
-                if retry == max_retries - 1:
-                    print("Error starting mission:", e)
-                    exit(1)
-                else:
-                    time.sleep(2)
-        print("done with init malmo")
-        return agent_host
+    #Record Mission 
+    my_mission = MalmoPython.MissionSpec(getXML(n_pigs=N_PIGS, obstacles=True, missiontype='kill'), True)
+    my_mission_record = MalmoPython.MissionRecordSpec()
+    my_mission.setViewpoint(0)
+    max_retries = 5
+    my_clients = MalmoPython.ClientPool()
+    my_clients.add(MalmoPython.ClientInfo('127.0.0.1', 10002))
+    for retry in range(max_retries):
+        try:
+            agent_host.startMission( my_mission, my_clients, my_mission_record, 0, 'baseline_seek')
+            break
+        except RuntimeError as e:
+            if retry == max_retries - 1:
+                print("Error starting mission:", e)
+                exit(1)
+            else:
+                time.sleep(2)
+    print("done with init malmo")
+    return agent_host
 
 
 if __name__ == '__main__':
     agent_host = MalmoPython.AgentHost()
-    main(agent_host)
+    # main(agent_host, calc_actions_random)
+    main(agent_host, calc_actions_seek)

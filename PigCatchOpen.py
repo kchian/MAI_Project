@@ -57,7 +57,7 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
             <RewardForMissionEnd rewardForDeath="-5000">
                 <Reward description="out_of_time" reward="-1000" />
             </RewardForMissionEnd>
-            <AgentQuitFromTimeUp timeLimitMs="40000" description="out_of_time"/>
+            <AgentQuitFromTimeUp timeLimitMs="30000" description="out_of_time"/>
             '''
         inventory = '''
             <Inventory>
@@ -92,9 +92,9 @@ def getXML(n_pigs = 5, obstacles = True, missiontype="punch"):
                             "<DrawCuboid x1='{}' x2='{}' y1='-3' y2='1' z1='{}' z2='{}' type='grass'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='lapis_block'/>".format(-SIZE - 1, SIZE + 1, -SIZE - 1, SIZE + 1) + \
                             "<DrawCuboid x1='{}' x2='{}' y1='2' y2='3' z1='{}' z2='{}' type='air'/>".format(-SIZE, SIZE, -SIZE, SIZE) + \
-                            "".join(drawTree(getCoord(blocklist)) for coord in range(4) if obstacles) + \
-                            "".join(drawPlus(getCoord(blocklist)) for coord in range(4) if obstacles) + \
-                            "".join(drawLava(getCoord(blocklist)) for coord in range(10) if obstacles) + \
+                            "".join(drawTree(getCoord(blocklist)) for coord in range(15) if obstacles) + \
+                            "".join(drawPlus(getCoord(blocklist)) for coord in range(5) if obstacles) + \
+                            "".join(drawLava(getCoord(blocklist)) for coord in range(15) if obstacles) + \
                             "".join(drawPig(getCoord(pig_blocklist)) for coord in range(n_pigs)) + \
                             '''
                         </DrawingDecorator>

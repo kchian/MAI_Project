@@ -31,26 +31,26 @@ def drawObstacles():
     #         else:
     #             out += drawTree(x, z)
     
-    #lava = [(-2, 5), (0, 5), (1, 5), (3, 5)]
-    lava = [(-2, 6), (0, 6), (2, 6)]
-    for x, z in lava:
-        out += drawLava(x, z)
+    # #lava = [(-2, 5), (0, 5), (1, 5), (3, 5)]
+    # lava = [(-2, 6), (0, 6), (2, 6)]
+    # for x, z in lava:
+    #     out += drawLava(x, z)
         
-    # tree = [(-2, 3), (0, 3), (2, 3)]
-    tree = [(-2, 3), (-1, 3),  (2, 3)]
-    for x, z in tree:
-        out += drawTree(x, z)
-    # for z in range(2, 7, 2):
-    #     x = randint(-SIZEX, SIZEX)
-    #     obstacle = randint(0, 2)
-    #     for i in range(randint(2,3)):
-    #         x = randint(-SIZEX, SIZEX)
-    #         if obstacle == 0:
-    #             out += drawLava(x, z)
-    #             # out += drawLava(x + 1, z)
-    #         else:
-    #             out += drawTree(x, z)
-    #             # out += drawTree(x + 1, z)
+    # # tree = [(-2, 3), (0, 3), (2, 3)]
+    # tree = [(-2, 3), (-1, 3),  (2, 3)]
+    # for x, z in tree:
+    #     out += drawTree(x, z)
+    for z in range(2, 7, 2):
+        x = randint(-SIZEX, SIZEX)
+        obstacle = randint(0, 2)
+        for i in range(randint(2,3)):
+            x = randint(-SIZEX, SIZEX)
+            if obstacle == 0:
+                out += drawLava(x, z)
+                # out += drawLava(x + 1, z)
+            else:
+                out += drawTree(x, z)
+                # out += drawTree(x + 1, z)
     return out
 
 
