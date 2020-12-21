@@ -30,7 +30,8 @@ from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
-LOAD = False
+LOAD = True
+TRAIN = True
 WIDTH, HEIGHT = (20, 20)
 pig_color = np.array([1, 57, 110])
 N_PIGS = 5
@@ -155,14 +156,6 @@ class Lumberjack(gym.Env):
             # https://github.com/microsoft/malmo/blob/master/Malmo/samples/Python_examples/hit_test.py
             msg = o.text
             observations = json.loads(msg)
-            # if 'entities' in observations:
-            #     agent_pos = [observations['XPos'], observations['YPos'], observations['ZPos']]
-            #     for entity in observations['entities']:
-            #         if entity['name'] == 'Pig':
-            #             pig_pos = [entity['x'], entity['y'], entity['z']]
-            #             # distance
-            #             print(sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5)
-            #             reward += (10 - sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5) * 10
             # if no more pigs left
             if 'entities' in observations:
                 if all([entity['name'] != 'Pig' for entity in observations['entities']]):
@@ -185,7 +178,7 @@ class Lumberjack(gym.Env):
         self.obs, pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += (1 - np.exp(-pixels)) * 50
+        reward += (1 - np.exp(-pixels)) * 30
 
         self.episode_return += reward
         print(reward)
@@ -258,7 +251,7 @@ class Lumberjack(gym.Env):
 
         plt.clf()
         plt.plot(self.steps, returns_smooth)
-        plt.title('2 layer')
+        plt.title('1 layer')
         plt.ylabel('Return')
         plt.xlabel('Steps')
         s = time.time()
@@ -378,7 +371,7 @@ if __name__ == '__main__':
         "model": {
             "custom_model": "my_model",
             # "dim": 84, 
-            "fcnet_hiddens": [800]
+            # "fcnet_hiddens": [800]
             # # Used to be 42, 42 to get it to the right shape
             # "conv_filters": [[16, [4, 4], 2], 
             #                  [32, [16, 16], 2], 
@@ -390,43 +383,30 @@ if __name__ == '__main__':
         }
     })
 
-    # trainer = DDPGTrainer(env=Lumberjack, config={
-    #     'env_config': {},           # No environment parameters to configure
-    #     'framework': 'torch',       # Use pyotrch instead of tensorflow
-    #     'num_gpus': 0,              # We aren't using GPUs
-    #     'num_workers': 1,            # We aren't using parallelism
-    #     "explore": True,
-    #     "rollout_fragment_length": 1,
-    #     "train_batch_size": 1,
-    #     "log_level": "DEBUG",
-    #     # Provide a dict specifying the Exploration object's config.
-    #     "exploration_config": {
-    #         # The Exploration class to use. In the simplest case, this is the name
-    #         # (str) of any class present in the `rllib.utils.exploration` package.
-    #         # You can also provide the python class directly or the full location
-    #         # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.EpsilonGreedy").
-    #         "type": "StochasticSampling",
-    #         # "type": "PerWorkerEpsilonGreedy"
-    #         # Add constructor kwargs here (if any).
-    #     },
-    #     "model": {
-    #         "custom_model": "my_model",
-    #         # "dim": 84, 
-    #         "conv_filters": [[16, [4, 4], 2], [32, [4, 4], 1], [64, [5, 5], 1], [32, [42, 42], 1]],
-    #         "no_final_linear": True,
-    #     }
-    # })
-    # os.chdir(r'')
-    # print(os.listdir())
     if LOAD:
         # this is the checkpoint from something trained in a small environment with a single pig
         # trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\turn_withpunch_linear\checkpoint_171\check")
-        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\2openworld_pixel_1pig\checkpoint_403\check")
-    for i in range(1000):
-        # Perform one iteration of training the policy with PPO
-        result = trainer.train()
+        trainer.restore(r"C:\Users\Kevin\Documents\classes\CS175\checkpoints\small_set_obstacles\checkpoint_451\check")
+    if TRAIN:
+        for i in range(1000):
+            # Perform one iteration of training the policy with PPO
+            result = trainer.train()
 
-        if i % 10 == 0:
-            checkpoint = trainer.save()
-            print("checkpoint saved at", checkpoint)
-    trainer.save()
+            if i % 10 == 0:
+                checkpoint = trainer.save()
+                print("checkpoint saved at", checkpoint)
+        trainer.save()
+    else:
+        # instantiate env class
+        env = Lumberjack({})
+
+        while True:
+            # run until episode ends
+            episode_reward = 0
+            done = False
+            obs = env.reset()
+            while not done:
+                action = trainer.compute_action(obs)
+                obs, reward, done, info = env.step(action)
+                episode_reward += reward
+            print(reward)

@@ -31,23 +31,27 @@ def drawObstacles():
     #         else:
     #             out += drawTree(x, z)
     
-    lava = [(-2, 5), (0, 5), (1, 5), (3, 5)]
-    for x, z in lava:
-        out += drawLava(x, z)
+    # lava = [(-2, 5), (0, 5), (1, 5), (3, 5)]
+    # lava = [(-2, 3), (0, 3), (1, 3), (3, 3)]
+    # for x, z in lava:
+    #     out += drawLava(x, z)
         
-    tree = [(-2, 3), (0, 3), (2, 3)]
-    for x, z in tree:
-        print(x, z)
-        out += drawTree(x, z)
-    # for z in range(2, 7, 2):
-    #     x = randint(-SIZEX, SIZEX)
-    #     obstacle = randint(0, 2)
-    #     for i in range(2):
-    #         x = randint(-SIZEX, SIZEX)
-    #         if obstacle == 0:
-    #             out += drawLava(x, z)
-    #         else:
-    #             out += drawTree(x, z)
+    # # tree = [(-2, 3), (0, 3), (2, 3)]
+    # tree = [(-2, 5), (0, 5), (2, 5)]
+    # for x, z in tree:
+    #     print(x, z)
+    #     out += drawTree(x, z)
+    for z in range(2, 7, 2):
+        x = randint(-SIZEX, SIZEX)
+        obstacle = randint(0, 2)
+        for i in range(2):
+            x = randint(-SIZEX, SIZEX)
+            if obstacle == 0:
+                out += drawLava(x, z)
+                out += drawLava(x + 1, z)
+            else:
+                out += drawTree(x, z)
+                out += drawTree(x + 1, z)
     return out
 
 
@@ -107,7 +111,7 @@ def getXML():
                             <Height>1200</Height>
                         </ColourMapProducer>
                         <RewardForDamagingEntity>
-                            <Mob type="Pig" reward="300"/>
+                            <Mob type="Pig" reward="600"/>
                         </RewardForDamagingEntity>
                         <RewardForMissionEnd rewardForDeath="-300">
                             <Reward description="out_of_time" reward="-1000" />

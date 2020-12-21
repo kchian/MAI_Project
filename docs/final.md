@@ -49,8 +49,8 @@ Rewards:
  <!-- * -1 * (Movement speed [-1, 1]) * 5
  * -1 * (Turn speed [-0.5, 0.5]) * 20 -->
  * -20 per time step
- * (1 - np.exp(- # of pig_pixels)) * 50
- * +1000 for hitting the pig
+ * (1 - np.exp(- # of pig_pixels)) * 30
+ * +600 for hitting the pig
  * -300 for dying
  * -1000 for running out of time
  * 600 - duration * 15
