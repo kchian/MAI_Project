@@ -23,22 +23,31 @@ from ray.rllib.agents import ppo
 from ray.rllib.models import ModelCatalog
 from ray.rllib.agents.ddpg.ddpg import DDPGTrainer
 #-----------------------
+<<<<<<< HEAD
 # from PigCatchOpen import getXML
 from PigCatchSmall import getXML
 
+=======
+from PigCatchSmall import getXML
+>>>>>>> main
 from LumberjackQNet import VisionNetwork
 from CustomVision import CustomVisionNetwork
 from FCNet import FCNet
 
 from FrameProcessor import draw_helper
 
-LOAD = True
+LOAD = False
 WIDTH, HEIGHT = (20, 20)
+<<<<<<< HEAD
 COLORS = {(0, 93, 162): 0, # wood
             (46, 70, 139): 1, # grass
             (1, 57, 110): 2, # pig
             (139, 23, 23): 3, # diamond
             (185, 185, 70): 4} # lava
+=======
+pig_color = np.array([1, 57, 110])
+N_PIGS = 5
+>>>>>>> main
 
 def binary_conv_obs(obs):
     out = np.zeros((WIDTH, HEIGHT))
@@ -64,7 +73,7 @@ class Lumberjack(gym.Env):
         # Rllib Parameters
         self.num_outputs = 2
         #self.action_space = Box(0.0 , 2.00, shape=(2,), dtype=np.float32)
-        self.action_space = Box(np.array([-1, -0.5]), np.array([1, 0.5]),dtype=np.float32)
+        self.action_space = Box(np.array([0, -0.5]), np.array([1, 0.5]),dtype=np.float32)
         # self.observation_space = Box(-1.00, 1, shape=(WIDTH,HEIGHT,3), dtype=np.float32)
         self.observation_space = Box(-1.00, 1, shape=(WIDTH*HEIGHT*1,), dtype=np.float32)
 
@@ -79,6 +88,7 @@ class Lumberjack(gym.Env):
         self.times = []
         self.steps = []
         self.times = []
+        self.killed_pigs = []
 
     def reset(self):
         """
@@ -97,6 +107,7 @@ class Lumberjack(gym.Env):
         self.episode_return = 0
         self.episode_step = 0
         self.start = time.time()
+        
         # Log
         if len(self.returns) > self.log_frequency and \
             len(self.returns) % self.log_frequency == 0:
@@ -128,8 +139,9 @@ class Lumberjack(gym.Env):
         self.agent_host.sendCommand("attack 0")
         
         # negative reward for spinning
-        reward -= abs(action[0]) * 5
-        reward -= abs(action[1]) * 20
+        # reward -= abs(action[0]) * 10
+        # reward -= abs(action[1]) * 10
+        reward -= 20
         # Try upping this
         time.sleep(0.3)
         self.agent_host.sendCommand(f"move 0")
@@ -137,12 +149,17 @@ class Lumberjack(gym.Env):
         self.episode_step += 1
         # Get Done
         world_state = self.agent_host.getWorldState()
-
+        
         done = False
         if not world_state.is_mission_running:
             duration = time.time() - self.start
             self.times.append(duration)
-            reward += duration * 20
+            for o in world_state.observations:
+                msg = o.text
+                observations = json.loads(msg)
+                if 'entities' in observations:
+                    self.killed_pigs.append(sum([1 for entity in observations['entities'] if entity['name'] == 'Pig']))
+            reward += 600 - duration * 15
             done = True
             time.sleep(4)
 
@@ -162,25 +179,32 @@ class Lumberjack(gym.Env):
             #             # distance
             #             print(sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5)
             #             reward += (10 - sum([(agent_pos[i] - pig_pos[i])**2 for i in range(3)]) ** 0.5) * 10
-            if 'entities' in observations and all([entity['name'] != 'Pig' for entity in observations['entities']]):
-                done = True
-                self.agent_host.sendCommand(f"quit")
-                time.sleep(4)
-                duration = time.time() - self.start
-                self.times.append(duration)
-                reward += duration * 20
-                break
+            # if no more pigs left
+            if 'entities' in observations:
+                if all([entity['name'] != 'Pig' for entity in observations['entities']]):
+                    done = True
+                    self.agent_host.sendCommand(f"quit")
+                    time.sleep(4)
+                    duration = time.time() - self.start
+                    self.times.append(duration)
+                    self.killed_pigs.append(N_PIGS)
+                    reward += 600 - duration * 15
+                    break
+                for e in observations['entities']:
+                    if e['name'] == 'agent':
+                        reward += e['z'] / 2
             if u'LineOfSight' in observations:
                 los = observations[u'LineOfSight']
                 if los["type"] == "Pig":
-                    reward += 3
                     self.agent_host.sendCommand("attack 1")
                     self.agent_host.sendCommand("attack 0")
         self.obs, pixels = self.get_observation(world_state) 
         for r in world_state.rewards:
             reward += r.getValue()
-        reward += pixels * 10
+        reward += (1 - np.exp(-pixels)) * 50
+
         self.episode_return += reward
+        print(reward)
         # Get Reward
         return self.obs, reward, done, dict()
 
@@ -248,6 +272,8 @@ class Lumberjack(gym.Env):
         """
         box = np.ones(10) / 10
         returns_smooth = np.convolve(self.returns, box, mode='same')
+        times_smooth = np.convolve(self.times, box, mode='same')
+
         plt.clf()
         plt.plot(self.steps, returns_smooth)
         plt.title('With obstacles discrete')
@@ -259,7 +285,7 @@ class Lumberjack(gym.Env):
         with open(f'returns{s}.txt', 'w') as f:
             for value in self.returns:
                 f.write("{}\n".format(value)) 
-        plt.plot(range(len(self.times)), self.times)
+        plt.plot(range(len(times_smooth)), times_smooth)
         plt.savefig(f'times{s}.png')
 
 # The callback function
@@ -311,7 +337,7 @@ if __name__ == '__main__':
         'env_config': {},           # No environment parameters to configure
         'framework': 'torch',       # Use pyotrch instead of tensorflow
         'num_gpus': 0,              # We aren't using GPUs
-        'num_workers': 1,            # We aren't using parallelism
+        'num_workers': 2,            # We aren't using parallelism
         # Whether to write episode stats and videos to the agent log dir. This is
         # typically located in ~/ray_results.
         # "monitor": True,
@@ -357,7 +383,7 @@ if __name__ == '__main__':
         },
         "preprocessor_pref": "deepmind",
         # The default learning rate.
-        "lr": 0.0001,
+        "lr": 0.001,
         # "callbacks": {#"on_episode_start": on_episode_start, 
         #                             #"on_episode_step": on_episode_step, 
         #                             #"on_episode_end": on_episode_end, 
@@ -368,6 +394,7 @@ if __name__ == '__main__':
         "model": {
             "custom_model": "my_model",
             # "dim": 84, 
+            "fcnet_hiddens": [800]
             # # Used to be 42, 42 to get it to the right shape
             # "conv_filters": [[16, [4, 4], 2], 
             #                  [32, [16, 16], 2], 
