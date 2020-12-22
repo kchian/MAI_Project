@@ -84,6 +84,15 @@ Rewards:
  * reward += 50 for visiting a previously unseen block
  * 600 - duration * 15
 
+ <img src="images/initial_train.png" width="500">  
+
+*The returns chart for training the agent on the first fixed environment. You can see the returns plateauing in the positive range as it learns to avoid obstacles and kill the pig*
+
+ <img src="images/polish_train.png" width="500">  
+ 
+*The returns chart for the secondary training on another fixed environment. This time, it converges more quickly upon a solution which has approximately the same reward value as the initial training.*
+
+
 Action Space:
  * [0, 0.75] movement speed
  * [-0.5, 0.5] turn speed
@@ -138,7 +147,6 @@ These results are for the agent which moves forward and turns randomly. Each tri
 
 Here is plotted the time it took to reach each outcome. For example, since timing out took 30 seconds, the complete box plot of timing out is slightly above 30. Both of the successes for this random baseline were in the high 20s, implying that the randomized baseline is, as expected, not taking a very direct path towards the pig. On the other hand, the time it took to die is fairly well distributed throughout the time, also to be expected of random wandering.
 
-
 AI vs Seeking baseline: 
 
 ![AI results](images/ai_pie.png)![seek results](images/seek_pie.png)    
@@ -148,11 +156,28 @@ Now that the graph format has been introduced and the baseline established, we c
 ![Success comparison](images/compare_success.png)  
 This graph is slightly different than that of the randomized baseline: comparing instead of holistically visualizing times to reach states. Here, you can see that the AI is finding and killing the pig not just more consistently, but also significantly faster than the seeking baseline. This is in spite of the seeking baseline attempting to follow a direct path to the pig. Concretely, the average time to success of the AI was 7.65 seconds, while the average time for the seeking baseline is 14.53 seconds. Our AI is not just more consistent, but also quicker than our baselines.
 
+Qualitative Results
+
+ The AI generally did a very good job at avoiding obstacles. It preferred patterns which it somewhat recognized from it's training, for example preferring to move left around log barriers and circle right around lava. This allowed it to pathfind to the pig fairly consistently, and it would not be stymied very often. Most cases in which the AI died, it noticed the lava, turned, but did not turn enough to walk across its edge. This is likely either because of delay between frames preventing proper detection before falling into lava becomes imminent or because the AI often attempts to take a slightly shorter path than necessary, making most lava avoidance very near the edge.
+
+After hitting the pig once, the environment is somewhat "reset": the pig moves randomly through the course as it panics, and the AI is in an unfamiliar area of the map (having to turn around to re-navigate the course and kill the pig). This is another large portion of the timeouts and deaths. there were points in which the AI would find itself against walls or turning the wrong way to fall into lava. In the process of turning around, it also occasionally lost the pig. However, as the quantitative results suggest, it successfully found, reunited with, and killed the pig more often than not. It also performed better than the baseline at this renavigation, because the baseline has a chance of having a straight path to the pig, but after hitting, it would almost always try and fail to deal with obstacles.
+
 
 ### Open World Environment
 
+The open world environment became a reach goal over the course of the project. The complexity of a more open world, with exponentially more obstacle arrangements, pig locations, hazards, and noise proved difficult for our model to handle. Though AI could reliably track and kill nearby pigs, it found troubles with the variety of obstacles and with tracking pigs in the distance.
+![early open world](images/early_open_world.gif)   
+*An early iteration of our open world AI that could track nearby pigs. Notably, this iteration has no lava!*
 
+<img src="images/open_world.png" width="500">  
+ 
+*The final open_world implementation. Extra pigs for consistency in results measurement, since none of our baselines/AIs were performant with just one pig*
 
+Our final AI, designed to perform on the obstacle course with reduced randomness and scope, was set in this 20x20 environment with patterns of logs and lava indispersed throughout. Five pigs were spawned into random locations at least 5 blocks away from the agent, which spawned at the center of the area. 
+
+Qualitatively, our final AI did not do a particularly good job at detecting and avoiding obstacles, had problems finding and tracking pigs far from it, but retained its ability to track nearby pigs should they be near. This indicates some overfitting to our obstacle course environment; especially since the obstacle course has distinct rows of obstacles to overcome rather than a space with obstacles in no easily recognizable pattern. The baselines, performing as expected, naively fell into lava and got trapped in corners. In particular, the seeking baseline often got stuck in corners as it stared at pigs, unable to turn out of the corner.
+
+Quantitatively, the seeking baseline and the AI baseline performed approximately the same. Across 50 trials, both killed an average of about one pig before dying or running out of time. The AI, adept at getting out of corners, died more often than the baseline. That said, across deaths, the AI still survived on average 37.5% longer than the seeking baseline, indicating some obstacle avoidance.
 
 ## References
 During some parts of development, particularly designing reward functions, learning rates, the network, and evaluation we used primarily:  
