@@ -162,7 +162,8 @@ After hitting the pig once, the environment is somewhat "reset": the pig moves r
 
 ### Open World Environment
 
-The open world environment became a reach goal over the course of the project. The complexity of a more open world, with exponentially more obstacle arrangements, pig locations, hazards, and noise proved difficult for our model to handle. Though AI could reliably track and kill nearby pigs, it found troubles with the variety of obstacles and with tracking pigs in the distance.
+The open world environment became a reach goal over the course of the project. The complexity of a more open world, with exponentially more obstacle arrangements, pig locations, hazards, and noise proved difficult for our model to handle. Though AI could reliably track and kill nearby pigs, it found troubles with the variety of obstacles and with tracking pigs in the distance.  
+
 ![early open world](images/early_open_world.gif)   
 *An early iteration of our open world AI that could track nearby pigs. Notably, this iteration has no lava!*
 
