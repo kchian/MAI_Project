@@ -179,6 +179,8 @@ Qualitatively, our final AI did not do a particularly good job at detecting and 
 
 Quantitatively, the seeking baseline and the AI baseline performed approximately the same. Across 50 trials, both killed an average of about one pig before dying or running out of time. The AI, adept at getting out of corners, died more often than the baseline. That said, across deaths, the AI still survived on average 37.5% longer than the seeking baseline, indicating some obstacle avoidance.
 
+We also attempted to implement Q-Learning in a simplified version of the open world environment. This environment only included one pig and no obstacles. It did not perform as well as the model trained using PPO. The Q-Network only managed to hit the pig in 16% of the trials and killed the pig in 6% of trials. When it did manage to kill the pig it seemed to be based off luck rather than skill. The average time it took to kill a pig was 16.5 seconds. This average is most likely low because the agent would only manage to kill the pig when it spawned next to it. This is based on 100 evaluation trials run with a trained network. While visually observing the agent we would see it go in circles and only move after the pig if the pig was within a short range of the agent.
+
 ## References
 During some parts of development, particularly designing reward functions, learning rates, the network, and evaluation we used primarily:  
  * [Deep Reinforcement Learning Robot for Search and Rescue Applications: Exploration in Unknown Cluttered Environments](https://ieeexplore.ieee.org/document/8606991)  
