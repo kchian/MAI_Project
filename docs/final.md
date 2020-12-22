@@ -7,6 +7,8 @@ title:  Final
 
 ## Video
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/SuKnrf1fcQg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 ## Project Summary
 <!---
 Use another level-two header to start a Project Summary section. Write a few paragraphs
@@ -17,10 +19,9 @@ i.e. why is it not trivial, and why you need AI/ML algorithms to solve it
 -->
 The goal of our project was the creation of an agent which could find and catch pigs using only image input. The environment is limited to a 5x9 rectangle riddled with barriers and lava. The goal is for our agent to track and reach pigs before falling victim to traps or running out of time. The agent is measured in its reliability of killing pigs, in the time it takes to kill pigs, and the number of times it dies. Agents and baselines alike automatically hit pigs within its line-of-sight with a diamond axe to denote it reaching its goal. Two swift strikes of the axe slay the (virtual) beast!
 
-![environment](images/test_env.png)  
+<img src="images/test_env.png" width="500">  
 
 When in uncluttered environments, the problem is fairly simple to solve: a perfect agent in this case would turn to locate a pig and walk straight towards it. Once lava, trees, and blocks are introduced, it becomes difficult for simpler agents to manage unexpected obstacle arrangements. This project also has myriad parallels in ongoing areas of research, such as how to train search and rescue robots to navigate rubble after natural disasters or self-driving car obstacle avoidance. Though this application is simpler and virtual, removing some variables, it is clear that problems such as these require more than naive implementations of path-finding algorithms. In our problem setup, we are careful to not give our AI more than a realistic agent might get - no descriptions of specific obstacles or how/where they appear. In the environment riddled with obstacles, a perfect AI would perform akin to a floodfill depth first search with a heuristic towards the pig's exact location, hit it, and track it through any of it's panicked movements.
-
 
 
 ## Approaches
@@ -40,7 +41,7 @@ Our project evaluates the performance of two baselines: one which moves randomly
 
 The one which uses the naive approach works well with no obstacles, seeking and finding the pig. 
 
-![environment](images/baseline.gif)  
+<img src="images/baseline.gif" width="500">  
 
 #### Colormap Introduction
 The approach our project takes is that of an agent which uses Malmo's Colormap Video frames to move and turn through the environment. Colormap video frames is a video frame which has blocks and entities colored uniformly in unique colors to simplify vision tasks. When considering the real world, it is akin to having an object detection/classification system to operate on image data before using it as input.
@@ -71,10 +72,6 @@ for each iteration:
 ```
 
 Rewards:
- <!-- 
- * -1 * (Movement speed [-1, 1]) * 5
- * -1 * (Turn speed [-0.5, 0.5]) * 20 
- -->
  * -20 per time step
  * (1 - np.exp(- # of pig_pixels)) * 30
  * +600 for each time the agent damages the pig
